@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Guide | Operational Workflow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --accent: #8b5cf6;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        .gradient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 5rem;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .intro-text {
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section-box {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title i {
+            width: 40px;
+            height: 40px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .section-title h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .step-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.5rem;
+            border-radius: 20px;
+            border: 1px solid transparent;
+            transition: 0.3s;
+        }
+
+        .step-item:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .step-icon-small {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            background: var(--bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--success);
+            border: 1px solid var(--border);
+        }
+
+        .step-content h3 {
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .step-content p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .footer-cta {
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--primary);
+            color: white;
+            padding: 1.25rem 2.5rem;
+            border-radius: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: 0.3s;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 20px 40px -5px rgba(59, 130, 246, 0.6);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="gradient-bg"></div>
+
+    <div class="container">
+        <header>
+            <h1>QA Operational Workflow</h1>
+            <p class="intro-text">A step-by-step documentation of the Quality Assurance management cycle.</p>
+        </header>
+
+        <!-- SECTION 1 -->
+        <div class="section-box">
+            <div class="section-title">
+                <i data-lucide="door-open"></i>
+                <h2>1. Login</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small"><i data-lucide="user-check"></i></div>
+                    <div class="step-content">
+                        <h3>Role Selection</h3>
+                        <p>Identify yourself as either a <b>Manager</b> or an <b>Operator</b>. Managers get
+                            configuration tools, while Operators get production tools.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small"><i data-lucide="scan"></i></div>
+                    <div class="step-content">
+                        <h3>Personnel Authentication</h3>
+                        <p>Use the RFID scan feature to quickly verify your credentials. This logs your ID into the
+                            system for task assignment.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2 -->
+        <div class="section-box">
+            <div class="section-title">
+                <i data-lucide="settings"></i>
+                <h2>2. Product Configuration</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small"><i data-lucide="list-todo"></i></div>
+                    <div class="step-content">
+                        <h3>Custom Stage Definition</h3>
+                        <p>Admins can define the exact sequence of manufacturing stages (e.g., PCB Solder → LCD Mount →
+                            Final Chassis). Each stage can have its own unique set of QA checkpoints.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small"><i data-lucide="file-up"></i></div>
+                    <div class="step-content">
+                        <h3>Protocol Management</h3>
+                        <p>Upload Excel sheets to bulk-import checklists. This ensures that the entire factory follows
+                            the exact same quality standards.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3 -->
+        <div class="section-box" style="border: 1px solid var(--success); background: rgba(16, 185, 129, 0.05);">
+            <div class="section-title">
+                <i data-lucide="shield-check" style="color: var(--success); background: rgba(16, 185, 129, 0.1);"></i>
+                <h2>3. Sequential Gate Control</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--success);"><i data-lucide="lock"></i></div>
+                    <div class="step-content">
+                        <h3>Mandatory Pass Logic</h3>
+                        <p>The system enforces a <b>"Pass-to-Proceed"</b> rule. A specific unit cannot enter Stage 2
+                            until its Stage 1 QA status is verified as 'PASSED' in the digital database.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--success);"><i data-lucide="map-pin"></i></div>
+                    <div class="step-content">
+                        <h3>Unit Traceability</h3>
+                        <p>Every product is tracked by a unique Serial ID. If an operator tries to scan a unit that
+                            failed a previous stage, the system triggers an immediate <b>Stoppage Alert</b>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 4 -->
+        <div class="section-box">
+            <div class="section-title">
+                <i data-lucide="play"></i>
+                <h2>4. Inspection</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small"><i data-lucide="clipboard-check"></i></div>
+                    <div class="step-content">
+                        <h3>Live Execution</h3>
+                        <p>Operators follow a sequential checklist for each unit. Every point must be marked as
+                            <b>PASS</b> or <b>FAIL</b> before submission.
+                        </p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small"><i data-lucide="alert-circle"></i></div>
+                    <div class="step-content">
+                        <h3>Non-Conformance Logging</h3>
+                        <p>If a product fails a check, the system requires a reason and documentation. This prevents
+                            defective products from moving to the next stage.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 5 -->
+        <div class="section-box">
+            <div class="section-title">
+                <i data-lucide="activity"></i>
+                <h2>5. Analytics & Insights</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--primary);"><i data-lucide="bar-chart-2"></i></div>
+                    <div class="step-content">
+                        <h3>Yield Monitoring</h3>
+                        <p>Track the percentage of products passing first-time inspections. Identify which lines are
+                            falling below targets in real-time.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--primary);"><i data-lucide="pie-chart"></i></div>
+                    <div class="step-content">
+                        <h3>Defect Pattern Analysis</h3>
+                        <p>View visual breakdowns of common failures. This helps managers fix recurring issues at the
+                            source.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 6 -->
+        <div class="section-box">
+            <div class="section-title">
+                <i data-lucide="camera"></i>
+                <h2>6. Evidence & Documentation</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--warning);"><i data-lucide="image"></i></div>
+                    <div class="step-content">
+                        <h3>Visual Proof</h3>
+                        <p>Capture high-resolution photos of defects. This provides undeniable evidence for quality
+                            audits and supplier reviews.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--warning);"><i data-lucide="history"></i></div>
+                    <div class="step-content">
+                        <h3>Permanent Archive</h3>
+                        <p>Every inspection and photo is stored with a timestamp and operator name. This creates a 100%
+                            traceable history for every unit produced.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 7 -->
+        <div class="section-box" style="border-left: 4px solid var(--accent);">
+            <div class="section-title">
+                <i data-lucide="brain" style="color: var(--accent); background: rgba(139, 92, 246, 0.1);"></i>
+                <h2>7. Core Logic</h2>
+            </div>
+            <div class="step-grid">
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--accent);"><i data-lucide="database"></i></div>
+                    <div class="step-content">
+                        <h3>Digital State Management</h3>
+                        <p>The system tracks exactly where you are in a process. Even if you switch views, it holds your
+                            progress in memory until submission.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon-small" style="color: var(--accent);"><i data-lucide="layout-template"></i>
+                    </div>
+                    <div class="step-content">
+                        <h3>Dynamic Template Injection</h3>
+                        <p>The interface doesn't reload. It instantly swaps screens based on actions, making the system
+                            incredibly fast.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 8 -->
+        <div class="section-box">
+            <div class="section-title">
+                <i data-lucide="mouse-pointer-2"></i>
+                <h2>8. Interface Navigation Guide</h2>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                    <p style="margin-bottom: 5px;"><b><i data-lucide="grid"
+                                style="width: 14px; vertical-align: middle; margin-right: 5px; color: var(--primary);"></i>
+                            Control Panel</b></p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">The main overview dashboard for your
+                        current role.</p>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                    <p style="margin-bottom: 5px;"><b><i data-lucide="layers"
+                                style="width: 14px; vertical-align: middle; margin-right: 5px; color: var(--primary);"></i>
+                            Product Config</b></p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Manager interface for setting rules and
+                        checklists.</p>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                    <p style="margin-bottom: 5px;"><b><i data-lucide="activity"
+                                style="width: 14px; vertical-align: middle; margin-right: 5px; color: var(--primary);"></i>
+                            Live Analytics</b></p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time performance metrics and charts.
+                    </p>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                    <p style="margin-bottom: 5px;"><b><i data-lucide="log-out"
+                                style="width: 14px; vertical-align: middle; margin-right: 5px; color: var(--error);"></i>
+                            Logout</b></p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Safely terminates your session.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 9: STRATEGY & SUGGESTIONS -->
+        <div class="section-box"
+            style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid var(--primary);">
+            <div class="section-title">
+                <i data-lucide="sparkles" style="color: var(--primary); background: rgba(59, 130, 246, 0.1);"></i>
+                <h2>System Strategy & Recommendations</h2>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px;">
+                    <h4 style="color: var(--primary); margin-bottom: 0.5rem;"><i data-lucide="git-branch"
+                            style="width:16px; margin-right:8px;"></i> Implement Rework Workflows</h4>
+                    <p style="font-size: 0.95rem; color: var(--text-muted);">Instead of just 'FAIL', allow the system to
+                        flag a unit for <b>'Rework'</b>. This routes the product back to the specific stage it failed,
+                        rather than scrapping it.</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px;">
+                    <h4 style="color: var(--success); margin-bottom: 0.5rem;"><i data-lucide="bell-ring"
+                            style="width:16px; margin-right:8px;"></i> Instant Floor Notifications</h4>
+                    <p style="font-size: 0.95rem; color: var(--text-muted);">When a 'Gate Failure' occurs, trigger an
+                        automated alert to the <b>Shift Supervisor</b>. This enables immediate correction before the
+                        defect affects more units.</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px;">
+                    <h4 style="color: var(--accent); margin-bottom: 0.5rem;"><i data-lucide="database"
+                            style="width:16px; margin-right:8px;"></i> Digital Unit Travelers</h4>
+                    <p style="font-size: 0.95rem; color: var(--text-muted);">Generate a <b>'Digital Traveler'</b> for
+                        every unit ID. This traveler accumulates data from every stage passed, allowing for a 100% audit
+                        trail.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-cta" style="margin-bottom: 4rem;">
+            <a href="index.html" class="btn">
+                Launch System Execution
+                <i data-lucide="arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Premium | Factory Intelligence System</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- 🔐 Premium Login Screen -->
+    <div id="screen-login" class="login-screen">
+        <div class="login-container glass">
+            <img src="qa_system_logo.png" alt="Logo" class="login-logo">
+            <h1 class="login-title">Factory Intelligence</h1>
+            <p class="login-subtitle">Quality Assurance Management System v2.0</p>
+
+            <div class="flex flex-col gap-4 text-left">
+                <div class="form-group">
+                    <label class="form-label">Access ID</label>
+                    <input type="text" id="login-access-id" placeholder="Enter employee ID"
+                        onkeyup="if(event.key === 'Enter') handleLogin()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Passcode</label>
+                    <input type="password" id="login-passcode" placeholder="••••••••"
+                        onkeyup="if(event.key === 'Enter') handleLogin()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Operation Role</label>
+                    <select id="login-role">
+                        <option value="admin">Quality Assurance Manager / Admin</option>
+                        <option value="operator">Production Line Operator</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary w-full justify-center" style="margin-top: 1rem;" onclick="handleLogin()">
+                    Initialize Session
+                    <i data-lucide="zap" style="width: 18px;"></i>
+                </button>
+
+                <div class="badge-recognition-section">
+                    <p class="badge-label">SECURE BADGE RECOGNITION</p>
+                    <button class="btn btn-outline w-full justify-center" id="badge-btn" onclick="simulateBadgeScan()">
+                        <i data-lucide="scan-barcode" style="width: 20px;"></i>
+                        Scan Personnel RFID
+                    </button>
+                    <p class="text-muted text-center" style="font-size: 0.65rem; margin-top: 1.5rem; cursor: pointer;"
+                        onclick="seedCloudData()">
+                        New Project? <span style="color: var(--primary); text-decoration: underline;">Sync Local
+                            Defaults to Cloud</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🏗️ Main Application Shell -->
+    <div id="main-layout" class="app-shell hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <img src="qa_system_logo.png" alt="Logo" class="sidebar-logo">
+
+            <nav style="flex: 1;">
+                <a href="#" class="nav-link active" id="nav-dashboard" onclick="showDashboard()">
+                    <i data-lucide="grid"></i>
+                    Control Panel
+                </a>
+                <a href="#" class="nav-link" id="nav-management" onclick="showStageManagement()">
+                    <i data-lucide="layers"></i>
+                    Workflow Setup
+                </a>
+                <a href="#" class="nav-link" id="nav-analytics" onclick="showAnalytics()">
+                    <i data-lucide="activity"></i>
+                    Live Analytics
+                </a>
+                <a href="#" class="nav-link" id="nav-traceability" onclick="showTraceability()">
+                    <i data-lucide="search"></i>
+                    Production Ledger
+                </a>
+                <a href="#" class="nav-link" id="nav-users" onclick="showUserManagement()" style="display: none;">
+                    <i data-lucide="users"></i>
+                    Personnel Management
+                </a>
+            </nav>
+
+            <div class="user-profile-card">
+                <div class="flex items-center gap-3">
+                    <div class="user-avatar" id="user-avatar-initials">SM</div>
+                    <div class="user-info">
+                        <div id="user-display-name" class="user-name">Sarah Mitchell</div>
+                        <div id="user-display-role" class="user-role">Quality Assurance Manager</div>
+                    </div>
+                    <button class="btn-icon"
+                        style="background:none; border:none; padding:0; color:var(--text-muted); cursor:pointer;"
+                        onclick="logout()">
+                        <i data-lucide="log-out" style="width: 18px;"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <nav class="navbar">
+                <div class="flex items-center gap-4">
+                    <h2 id="view-title" class="tech-font" style="font-size: 1.25rem; font-weight: 700;">Dashboard</h2>
+                    <div id="breadcrumb" class="nav-breadcrumb">
+                        <span>/</span>
+                        <span id="breadcrumb-text">Overview</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <div class="status-indicator flex items-center gap-2">
+                        <div class="status-dot"></div>
+                        <span class="status-text">SYSTEM ONLINE</span>
+                    </div>
+                    <button
+                        style="background:none; border:none; padding:0; color:var(--text-main); cursor:pointer; position:relative;">
+                        <i data-lucide="bell" style="width: 20px;"></i>
+                        <span
+                            style="position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; background: var(--error); border-radius: 50%; border: 2px solid var(--surface);"></span>
+                    </button>
+                </div>
+            </nav>
+
+            <main class="main-viewport" id="content-area">
+                <!-- Dynamic Content Injected Here -->
+            </main>
+        </div>
+    </div>
+
+    <!-- 🍞 Toast Notification System -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- 🔥 Firebase Integration -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
