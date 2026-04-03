@@ -23,32 +23,75 @@ try {
 }
 
 // 🏛️ Manufacturing Stages (Factory Defaults)
+// 🏛️ IPQC Manufacturing Stages (From IPQC_Inspection_Points.xlsx)
 const DEFAULT_STAGES = [
     {
         id: 'stage_1',
-        name: 'PCB Assembly',
+        name: 'Raw Material Inventory',
         order: 1,
         checkpoints: [
-            { desc: 'Check for solder bridges on U1 mount', photo: true },
-            { desc: 'Verify Capacitor C14 orientation', photo: false }
+            { desc: 'Verify material matches BOM specification', photo: true },
+            { desc: 'Part number match (Yes/No)', photo: false },
+            { desc: 'Check component labeling accuracy', photo: false },
+            { desc: 'Inspect for physical damage (Cracks/Bends)', photo: true },
+            { desc: 'Verify PCB quality (No scratches/warping)', photo: true },
+            { desc: 'Verify supplier batch traceability', photo: false }
         ]
     },
     {
         id: 'stage_2',
-        name: 'Display Mount',
+        name: 'PCB Testing',
         order: 2,
         checkpoints: [
-            { desc: 'Verify LCD ribbon cable seating', photo: true },
-            { desc: 'Dead pixel test on boot', photo: false }
+            { desc: 'Verify PCB power ON functionality', photo: true },
+            { desc: 'Check for short/open circuits (Continuity)', photo: false },
+            { desc: 'Validate voltage levels (within range)', photo: true },
+            { desc: 'Inspect for solder defects (Bridges/dry joints)', photo: true },
+            { desc: 'Verify component placement & alignment', photo: false }
         ]
     },
     {
         id: 'stage_3',
-        name: 'Final Casing',
+        name: 'Software Flashing Stage 1',
         order: 3,
         checkpoints: [
-            { desc: 'Inspect for aesthetic scratches', photo: false },
-            { desc: 'Button tactile feedback test', photo: true }
+            { desc: 'Verify correct firmware version matches specification', photo: true },
+            { desc: 'Check firmware upload success & device detection', photo: false },
+            { desc: 'Monitor for flashing interruptions', photo: false },
+            { desc: 'Log flashing execution status (Success/Fail)', photo: true }
+        ]
+    },
+    {
+        id: 'stage_4',
+        name: 'Software Flashing Stage 2',
+        order: 4,
+        checkpoints: [
+            { desc: 'Verify final firmware configuration', photo: true },
+            { desc: 'Validate software integrity & functional validation', photo: false },
+            { desc: 'Confirm calibration settings are correct', photo: true },
+            { desc: 'Verify readiness for mechanical assembly', photo: false }
+        ]
+    },
+    {
+        id: 'stage_5',
+        name: 'Mechanical Assembly',
+        order: 5,
+        checkpoints: [
+            { desc: 'Verify component fitting & internal alignment', photo: true },
+            { desc: 'Inspect display positioning & keypad response', photo: false },
+            { desc: 'Check screw tightening & gap management', photo: true },
+            { desc: 'Final mechanical physical damage inspection', photo: true }
+        ]
+    },
+    {
+        id: 'stage_6',
+        name: 'Packing & Shipping',
+        order: 6,
+        checkpoints: [
+            { desc: 'Verify final functional pass status', photo: true },
+            { desc: 'Inspect for cosmetic defects (surface finish)', photo: true },
+            { desc: 'Check labeling accuracy & packaging quality', photo: false },
+            { desc: 'Ensure all accessories are included in kit', photo: false }
         ]
     }
 ];
@@ -108,6 +151,16 @@ async function initSystemCloudSync() {
     if (localAnalytics) yieldData = JSON.parse(localAnalytics);
     if (localLedger) units = JSON.parse(localLedger);
     if (localAudit) globalAuditLog = JSON.parse(localAudit);
+
+    // 🔐 Restore Session & Apply UI Restrictions
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        document.getElementById('screen-login').classList.add('hidden');
+        document.getElementById('main-layout').classList.remove('hidden');
+        applyRoleRestrictions();
+        showDashboard();
+    }
 
     if (!cloudActive) return;
 
@@ -665,12 +718,16 @@ const templates = {
     `,
     stageManagement: `
         <div class="animate-fade">
-             <div class="view-header">
+            <div class="view-header">
                 <div>
                     <h2 class="view-title-main">Workflow Orchestration</h2>
                     <p class="text-muted">Define the sequential stages and mandatory checkpoints</p>
                 </div>
                 <div class="flex gap-3">
+                    <label class="btn btn-outline" style="cursor: pointer;">
+                        <input type="file" id="excel-import" style="display: none;" onchange="importExcelWorkflow(event)">
+                        <i data-lucide="file-spreadsheet" style="width:18px"></i> Import IPQC Excel
+                    </label>
                     <button class="btn btn-outline" onclick="exportWorkflow()"><i data-lucide="download" style="width:18px"></i> Export Config</button>
                     <button class="btn btn-outline" onclick="resetStages()"><i data-lucide="refresh-cw" style="width:18px"></i> Reset to Default</button>
                     <button class="btn btn-primary" onclick="showCreateStage()"><i data-lucide="plus-circle" style="width:18px"></i> Add New Stage</button>
@@ -809,22 +866,39 @@ function handleLogin() {
     }
 
     currentUser = user;
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
     document.getElementById('screen-login').classList.add('hidden');
     document.getElementById('main-layout').classList.remove('hidden');
-    document.getElementById('user-display-name').textContent = currentUser.name;
-    document.getElementById('user-display-role').textContent = currentUser.role === 'admin' ? 'QA Manager' : 'Line Operator';
 
-    // Set Initials
-    const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
-    document.getElementById('user-avatar-initials').textContent = initials;
-
-    // Toggle Nav
-    document.getElementById('nav-management').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
-    document.getElementById('nav-analytics').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
-    document.getElementById('nav-users').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+    // Apply Role-Based Sidebars
+    applyRoleRestrictions();
 
     showDashboard();
+    showToast(`Session Initialized: Welcome, ${user.name}`, "success");
+}
+
+function applyRoleRestrictions() {
+    if (!currentUser) return;
+    const isAdmin = currentUser.role === 'admin';
+
+    // Sidebar Links
+    const mgmtLink = document.getElementById('nav-management');
+    const analyticsLink = document.getElementById('nav-analytics');
+    const traceabilityLink = document.getElementById('nav-traceability');
+    const usersLink = document.getElementById('nav-users');
+
+    if (mgmtLink) mgmtLink.style.display = isAdmin ? 'flex' : 'none';
+    if (analyticsLink) analyticsLink.style.display = isAdmin ? 'flex' : 'none';
+    if (traceabilityLink) traceabilityLink.style.display = isAdmin ? 'flex' : 'none';
+    if (usersLink) usersLink.style.display = isAdmin ? 'flex' : 'none';
+
+    // Profile Update
+    document.getElementById('user-display-name').textContent = currentUser.name;
+    document.getElementById('user-display-role').textContent = isAdmin ? 'QA Manager / Admin' : 'Production Line Operator';
+
+    const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+    document.getElementById('user-avatar-initials').textContent = initials;
 }
 
 function showDashboard() {
@@ -1825,5 +1899,68 @@ function showToast(msg, type = 'info', duration = 4000) {
     }, duration);
 }
 
+// 📊 EXCEL WORKFLOW IMPORT ENGINE
+function importExcelWorkflow(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // Convert sheet to json
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) {
+                showToast("Excel sheet appears to be empty", "error");
+                return;
+            }
+
+            // Organize by Stages
+            const stagesMap = {};
+            jsonData.forEach((row, index) => {
+                const stageName = row['Stage'] || row['stage'] || 'General Inspection';
+                const checkpointDesc = row['Checkpoint'] || row['checkpoint'] || row['Description'] || 'Verify Parameter';
+                const isPhotoMandatory = (row['Type'] || row['type'] || '').toLowerCase().includes('visual') || (row['Photo'] || '').toString().toLowerCase() === 'yes';
+
+                if (!stagesMap[stageName]) {
+                    stagesMap[stageName] = {
+                        id: `stage_${Object.keys(stagesMap).length + 1}`,
+                        name: stageName,
+                        order: Object.keys(stagesMap).length + 1,
+                        checkpoints: []
+                    };
+                }
+
+                stagesMap[stageName].checkpoints.push({
+                    desc: checkpointDesc,
+                    photo: isPhotoMandatory
+                });
+            });
+
+            // Update System
+            manufacturingStages = Object.values(stagesMap);
+            persistStages();
+
+            showToast(`Import Success: ${manufacturingStages.length} IPQC Stages created`, "success");
+            showStageManagement(); // Refresh view
+
+            if (cloudActive) {
+                seedCloudData(); // Sync up
+            }
+
+        } catch (err) {
+            console.error(err);
+            showToast("Failed to parse Excel file. Check format.", "error");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 // Init
+applyRoleRestrictions();
 lucide.createIcons();
