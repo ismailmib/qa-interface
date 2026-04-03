@@ -820,7 +820,7 @@ const templates = {
             <div class="card">
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Full Name</th><th>Access ID</th><th>Role</th><th>Activity Level</th><th>Action</th></tr></thead>
+                        <thead><tr><th>Full Name</th><th>Access ID</th><th>Passcode</th><th>Role</th><th>Activity Level</th><th>Action</th></tr></thead>
                         <tbody id="user-list-body"></tbody>
                     </table>
                 </div>
@@ -1786,10 +1786,13 @@ function showUserManagement() { render('userManagement', 'Admin Control', 'Users
 function populateUserList() {
     const body = document.getElementById('user-list-body');
     if (!body) return;
+
+    // TEMPORARY: Adding 'Passcode' column for recovery
     body.innerHTML = usersData.map(u => `
         <tr>
             <td><strong>${u.name}</strong></td>
             <td><code style="background:var(--border); padding:2px 6px; border-radius:4px;">${u.accessId}</code></td>
+            <td><code style="color:var(--accent); font-weight:800;">${u.pass}</code></td>
             <td><span class="badge ${u.role === 'admin' ? 'badge-primary' : 'badge-success'}">${u.role.toUpperCase()}</span></td>
             <td>${u.stats ? (u.stats.passed + u.stats.scrapped) : 0} actions</td>
             <td><button class="btn btn-outline" style="padding:0.4rem; color:var(--error);" onclick="confirm('Delete user ${u.name}?') ? deleteUser('${u.id}') : null"><i data-lucide="trash-2" style="width:14px;"></i></button></td>
