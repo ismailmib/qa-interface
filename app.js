@@ -198,17 +198,26 @@ async function initSystemCloudSync() {
     try {
         const collections = ['users', 'stages', 'analytics', 'ledger', 'audit'];
         for (const col of collections) {
-            const snap = await db.collection('sys').doc(col).get();
-            if (snap.exists) {
-                const cloudData = snap.data().data;
-                if (col === 'users') usersData = cloudData;
-                if (col === 'stages') manufacturingStages = cloudData;
-                if (col === 'analytics') yieldData = cloudData;
-                if (col === 'ledger') units = cloudData;
-                if (col === 'audit') globalAuditLog = cloudData;
-            }
+            // 🛰️ REAL-TIME CLOUD HANDSHAKE (onSnapshot)
+            db.collection('sys').doc(col).onSnapshot(doc => {
+                if (doc.exists) {
+                    const cloudData = doc.data().data;
+                    if (col === 'users') usersData = cloudData;
+                    if (col === 'stages') manufacturingStages = cloudData;
+                    if (col === 'analytics') yieldData = cloudData;
+                    if (col === 'ledger') units = cloudData;
+                    if (col === 'audit') globalAuditLog = cloudData;
+
+                    // Live UI Refreshes (If on correct view)
+                    if (col === 'ledger' && document.getElementById('trace-result-area')) runLiveFilter();
+                    if (col === 'users' && document.getElementById('mgmt-user-list-body')) populateUserList();
+                }
+            }, error => {
+                console.error(`Subscription Error for ${col}:`, error);
+            });
         }
 
+        // Final Safety Check for new setups
         if (usersData.length === 0) {
             usersData = [
                 { id: 'u1', name: 'Sarah Mitchell', role: 'admin', accessId: 'admin', pass: 'admin123', stats: { passed: 0, scrapped: 0 } },
@@ -217,10 +226,10 @@ async function initSystemCloudSync() {
         }
 
         updateCloudStatus(true, 'CLOUD SYNC VERIFIED');
-        showToast("✅ Success: Local & Firebase Records are 100% Identical", "success", 3000);
+        showToast("✅ Real-Time Firebase Subscription Active", "success", 2000);
     } catch (e) {
         updateCloudStatus(false, 'SYNC ERROR');
-        showToast("⚠️ Cloud Sync Error - Using Local Ledger", "warning");
+        showToast("⚠️ Cloud Connection Error - Using Local Legacy", "warning");
     }
 }
 
