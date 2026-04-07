@@ -922,11 +922,28 @@ function render(templateKey, title, breadcrumb) {
         document.getElementById('op-stat-scrapped').textContent = currentUser.stats.scrapped;
         populateOperatorStages();
     }
-    if (templateKey === 'traceability') runLiveFilter();
+    if (templateKey === 'traceability') {
+        runLiveFilter();
+        const searchInput = document.getElementById('search-serial');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchUnit();
+            });
+        }
+    }
     if (templateKey === 'userManagement') populateUserList();
     if (templateKey === 'stageManagement') populateStagesTimeline();
     if (templateKey === 'executionScreen') setupExecutionScreen();
     if (templateKey === 'createStage' && editingStageId) setupCreateStageForm();
+    if (templateKey === 'adminDashboard') {
+        updateAdminGauges();
+        updateAuditFeed();
+        updateStageHeatmap('stage-yield-heat-map');
+    }
+    if (templateKey === 'analytics') {
+        updateStageHeatmap('analytics-heatmap');
+        updateAnalyticsSummary();
+    }
 
     lucide.createIcons();
 }
@@ -1834,72 +1851,27 @@ function runLiveFilter() {
                     <thead>
                         <tr>
                             <th>Serial / Lot</th>
-                            <th>Current/Last Stage</th>
-                            <th>Status Binder</th>
-                            <th>Logs</th>
-                            <th>Action</th>
+                            <th>Current/Last Path</th>
+                            <th>Latest Status</th>
+                            <th>Last Touchpoint</th>
+                            <th>Full Insight</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(u => {
-        let badgeClass = 'badge-success';
-        let statusLabel = u.status;
-        if (u.status === 'SCRAP') badgeClass = 'badge-error';
-        if (u.status === 'MRB_REVIEW') {
-            badgeClass = 'badge-error';
-            statusLabel = 'PENDING MRB';
-        }
-        if (u.status === 'IN_PROGRESS') {
-            badgeClass = 'badge-warning';
-            statusLabel = 'WIP';
-        }
-        if (u.isRework) {
-            badgeClass = 'badge-warning';
-            statusLabel = 'REWORK';
-        }
-
-        // Get last known stage from history or name of current stage
-        const lastLog = u.history[u.history.length - 1];
-        const currentStage = manufacturingStages.find(s => s.order === u.currentStageOrder);
-        const stageName = currentStage ? currentStage.name : (lastLog ? lastLog.stage : 'Awaiting Stage 1');
-
-        // CUSTOM ACTIONS FOR MRB REVIEW
-        let actionBtn = `
-            <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.7rem; gap:4px;" 
-                    onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">
-                <i data-lucide="eye" style="width:12px"></i> Heritage Drill-down
-            </button>`;
-
-        if (u.status === 'MRB_REVIEW') {
-            actionBtn = `
-                <div class="flex gap-2">
-                    <button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:var(--success); border:none;" onclick="authorizeRework('${u.serial}')">Authorize Rework</button>
-                    <button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:var(--error); border:none;" onclick="confirmFinalScrap('${u.serial}')">Final Scrap</button>
-                </div>
-            `;
-        }
-
-        return `
-                            <tr class="${u.status === 'MRB_REVIEW' ? 'mrb-priority-row' : ''}">
+                        ${filtered.map(u => `
+                            <tr>
+                                <td style="font-weight: 800; color: var(--text-bright);">${u.serial}</td>
+                                <td><span style="font-size:0.75rem;">${u.history.length > 0 ? u.history[u.history.length - 1].stage : '--'}</span></td>
                                 <td>
-                                    <div style="font-weight:800; font-size:1rem; color:var(--primary); font-family:monospace;">${u.serial}</div>
-                                    <div class="text-muted" style="font-size:0.6rem;">Lot: ASSEMBLY-A1</div>
+                                    <span class="status-dot-pulse" style="width:6px; height:6px; background:${u.status === 'COMPLETED' ? 'var(--success)' : (u.status === 'MRB_REVIEW' ? 'var(--error)' : 'var(--warning)')}"></span>
+                                    <span class="badge ${u.status === 'COMPLETED' ? 'badge-success' : (u.status === 'MRB_REVIEW' ? 'badge-error' : 'badge-warning')}">
+                                        ${u.status.replace('_', ' ')}
+                                    </span>
                                 </td>
-                                <td>
-                                    <div style="font-weight:700;">${stageName}</div>
-                                    <div class="text-muted" style="font-size:0.65rem;">${u.history.length > 0 ? 'Active Workflow' : 'Just Started'}</div>
-                                </td>
-                                <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="database" style="width:12px; color:var(--text-muted);"></i>
-                                        <span>${u.history.length} Logs</span>
-                                    </div>
-                                </td>
-                                <td>${actionBtn}</td>
+                                <td class="text-muted" style="font-size:0.7rem;">${u.history.length > 0 ? u.history[u.history.length - 1].time : '--'}</td>
+                                <td><button class="btn btn-outline" style="font-size:0.65rem; padding: 4px 8px;" onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">Trace Heritage</button></td>
                             </tr>
-        `;
-    }).join('')}
+                        `).join('')}
                     </tbody>
                 </table>
             </div>
@@ -1907,7 +1879,6 @@ function runLiveFilter() {
     `;
     lucide.createIcons();
 }
-
 function exportWorkflow() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(manufacturingStages, null, 2));
     const downloadAnchorNode = document.createElement('a');
@@ -1929,7 +1900,7 @@ function logout() {
 }
 
 function reworkScrappedUnit(sn) {
-    if (!confirm(`🔧 Authorize Rework for unit ${sn}? This will return the unit to the stage where it was scrapped.`)) return;
+    if (!confirm(`🔧 Authorize Rework for unit ${sn} ? This will return the unit to the stage where it was scrapped.`)) return;
 
     const unit = units[sn];
     if (unit) {
@@ -1946,7 +1917,7 @@ function reworkScrappedUnit(sn) {
             note: "Unit restored to Stage " + unit.currentStageOrder
         });
 
-        pushAudit("UNIT_REWORK", `Unit ${sn} re-authorized for Stage ${unit.currentStageOrder}`);
+        pushAudit("UNIT_REWORK", `Unit ${sn} re - authorized for Stage ${unit.currentStageOrder}`);
         persistUnits();
 
         showToast(`Unit ${sn} has been returned to Stage ${unit.currentStageOrder}.`, "warning");
@@ -1962,13 +1933,13 @@ function populateUserList() {
     if (!body) return;
 
     body.innerHTML = usersData.map(u => `
-        <tr>
+    < tr >
             <td><strong>${u.name}</strong></td>
             <td><code style="background:var(--border); padding:2px 6px; border-radius:4px;">${u.accessId}</code></td>
             <td><span class="badge ${u.role === 'admin' ? 'badge-primary' : 'badge-success'}">${u.role.toUpperCase()}</span></td>
             <td>${u.stats ? (u.stats.passed + u.stats.scrapped) : 0} actions</td>
             <td><button class="btn btn-outline" style="padding:0.4rem; color:var(--error);" onclick="confirm('Delete user ${u.name}?') ? deleteUser('${u.id}') : null"><i data-lucide="trash-2" style="width:14px;"></i></button></td>
-        </tr>
+        </tr >
     `).join('');
     lucide.createIcons();
 }
@@ -2006,17 +1977,17 @@ function updateAuditFeed() {
     const recentLogs = globalAuditLog.slice(-10).reverse(); // Last 10 events
 
     if (recentLogs.length === 0) {
-        list.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:2rem;">Waiting for factory production events...</td></tr>`;
+        list.innerHTML = `< tr > <td colspan="4" class="text-center text-muted" style="padding:2rem;">Waiting for factory production events...</td></tr > `;
         return;
     }
 
     list.innerHTML = recentLogs.map(log => `
-        <tr style="border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : (log.event.includes('REWORK') ? 'var(--warning)' : 'var(--success)')}">
+    < tr style = "border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : (log.event.includes('REWORK') ? 'var(--warning)' : 'var(--success)')}" >
             <td><strong style="color:var(--text-bright);">${log.details.split(' ')[1] || '---'}</strong></td>
             <td><span class="badge" style="background:rgba(255,255,255,0.05); font-size:0.6rem;">${log.event.split('_')[0]}</span></td>
             <td style="font-size:0.75rem;">${log.details}</td>
             <td class="text-muted" style="font-size:0.65rem;">${log.time.split(',')[1] || log.time}</td>
-        </tr>
+        </tr >
     `).join('');
 }
 
@@ -2027,7 +1998,7 @@ function updateOpLeague() {
         const total = u.stats.passed + u.stats.scrapped;
         const eff = total === 0 ? 0 : (u.stats.passed / total * 100).toFixed(0);
         return `
-            <tr>
+    < tr >
                 <td><strong>${u.name}</strong></td>
                 <td><span class="badge badge-success">OPERATOR</span></td>
                 <td style="color:var(--success); font-weight:800;">+${u.stats.passed}</td>
@@ -2040,8 +2011,8 @@ function updateOpLeague() {
                         <span>${eff}%</span>
                     </div>
                 </td>
-            </tr>
-        `;
+            </tr >
+    `;
     }).join('');
 }
 
@@ -2049,7 +2020,7 @@ function updateOpLeague() {
 function showToast(msg, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
+    toast.className = `toast toast - ${type} `;
 
     let icon = 'info';
     if (type === 'success') icon = 'check-circle';
@@ -2057,10 +2028,10 @@ function showToast(msg, type = 'info', duration = 4000) {
     if (type === 'warning') icon = 'alert-triangle';
 
     toast.innerHTML = `
-        <i data-lucide="${icon}" style="width:20px;"></i>
+    < i data - lucide="${icon}" style = "width:20px;" ></i >
         <div style="flex:1; font-size:0.85rem; font-weight:600;">${msg}</div>
         <i data-lucide="x" style="width:14px; opacity:0.5;"></i>
-    `;
+`;
 
     container.appendChild(toast);
     lucide.createIcons();
@@ -2110,7 +2081,7 @@ function importExcelWorkflow(event) {
 
                 if (!stagesMap[stageName]) {
                     stagesMap[stageName] = {
-                        id: `stage_${Object.keys(stagesMap).length + 1}`,
+                        id: `stage_${Object.keys(stagesMap).length + 1} `,
                         name: stageName,
                         order: Object.keys(stagesMap).length + 1,
                         checkpoints: []
