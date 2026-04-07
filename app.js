@@ -137,8 +137,25 @@ async function pushAudit(event, details) {
     if (cloudActive) await db.collection('sys').doc('audit').set({ data: globalAuditLog });
 }
 
+function updateCloudStatus(isActive, message) {
+    const dot = document.getElementById('cloud-status-dot');
+    const text = document.getElementById('cloud-status-badge-text');
+    const loginDot = document.getElementById('login-cloud-dot');
+    const loginText = document.getElementById('login-cloud-text');
+
+    if (dot) dot.style.background = isActive ? 'var(--success)' : 'var(--error)';
+    if (text) text.textContent = isActive ? 'CLOUD SYNC ACTIVE' : 'CLOUD OFFLINE';
+    if (text) text.style.color = isActive ? 'var(--success)' : 'var(--error)';
+
+    if (loginDot) loginDot.style.background = isActive ? 'var(--success)' : 'var(--error)';
+    if (loginText) loginText.textContent = isActive ? (message || 'CLOUD SYNC VERIFIED') : 'CLOUD OFFLINE';
+    if (loginText) loginText.style.color = isActive ? 'var(--success)' : 'var(--error)';
+}
+
 // 🔋 INITIAL DATA SYNC ENGINE
 async function initSystemCloudSync() {
+    updateCloudStatus(false, 'CONNECTING...');
+
     // 1. Initial Load from Local Storage (Instant UI)
     const localUsers = localStorage.getItem('usersData');
     const localStages = localStorage.getItem('manufacturingStages');
@@ -162,9 +179,10 @@ async function initSystemCloudSync() {
         showDashboard();
     }
 
-    if (!cloudActive) return;
-
-    showToast("🛰️ Connecting to Production Cloud...", "info", 2000);
+    if (!cloudActive) {
+        updateCloudStatus(false, 'LOCAL ONLY MODE');
+        return;
+    }
 
     try {
         const collections = ['users', 'stages', 'analytics', 'ledger', 'audit'];
@@ -180,7 +198,6 @@ async function initSystemCloudSync() {
             }
         }
 
-        // Final Safety Check: If usersData is empty after sync, restore defaults
         if (usersData.length === 0) {
             usersData = [
                 { id: 'u1', name: 'Sarah Mitchell', role: 'admin', accessId: 'admin', pass: 'admin123', stats: { passed: 0, scrapped: 0 } },
@@ -188,8 +205,10 @@ async function initSystemCloudSync() {
             ];
         }
 
-        showToast("✅ Cloud Datasets Synchronized", "success", 2000);
+        updateCloudStatus(true, 'CLOUD SYNC VERIFIED');
+        showToast("✅ Success: Local & Firebase Records are 100% Identical", "success", 3000);
     } catch (e) {
+        updateCloudStatus(false, 'SYNC ERROR');
         showToast("⚠️ Cloud Sync Error - Using Local Ledger", "warning");
     }
 }

@@ -24,6 +24,12 @@
             <img src="qa_system_logo.png" alt="Logo" class="login-logo">
             <h1 class="login-title">Factory Intelligence</h1>
             <p class="login-subtitle">Quality Assurance Management System v2.0</p>
+            <div id="login-cloud-status" class="flex justify-center items-center gap-2"
+                style="margin-top: 1rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">
+                <div class="status-dot-pulse" style="width: 8px; height: 8px; background: var(--text-muted);"
+                    id="login-cloud-dot"></div>
+                <span id="login-cloud-text">CONNECTING TO FIREBASE...</span>
+            </div>
 
             <div class="flex flex-col gap-4 text-left">
                 <div class="form-group">
@@ -122,16 +128,13 @@
                 </div>
 
                 <div class="flex items-center gap-6">
-                    <div class="status-indicator flex items-center gap-2">
-                        <div class="status-dot"></div>
-                        <span class="status-text">SYSTEM ONLINE</span>
+                    <!-- ☁️ CLOUD SYNC INDICATOR -->
+                    <div class="status-indicator flex items-center gap-2" id="cloud-sync-badge-container">
+                        <div class="status-dot-pulse" id="cloud-status-dot"></div>
+                        <span class="status-text" id="cloud-status-badge-text"
+                            style="font-weight: 800; font-size: 0.6rem; letter-spacing: 0.05em;">CLOUD SYNC
+                            ACTIVE</span>
                     </div>
-                    <button
-                        style="background:none; border:none; padding:0; color:var(--text-main); cursor:pointer; position:relative;">
-                        <i data-lucide="bell" style="width: 20px;"></i>
-                        <span
-                            style="position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; background: var(--error); border-radius: 50%; border: 2px solid var(--surface);"></span>
-                    </button>
                 </div>
             </nav>
 
