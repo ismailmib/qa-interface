@@ -931,15 +931,21 @@ function render(templateKey, title, breadcrumb) {
     lucide.createIcons();
 }
 
-/** 🚀 FACTORY SIMULATION ENGINE (Stress Test 100 Units) */
-function generateMockShiftData() {
-    if (!confirm("⚠️ This will overwrite today's local yield stats and add 100 units to the ledger for testing. Proceed?")) return;
+/** 🚀 INTERACTIVE FACTORY STREAM (Live Shift Simulation) */
+async function generateMockShiftData() {
+    if (!confirm("🏭 Start Live Production Stream? This will process 100 units one-by-one to demonstrate the real-time nature of the system.")) return;
 
-    showToast("🏭 Bootstrapping 100-Unit Shift Simulation...", "info");
+    const btn = document.getElementById('sim-trigger-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="status-dot-pulse"></div> Line Active...';
+    }
+
+    showToast("📡 PRODUCTION STREAM ENGAGED: Units arriving at gates...", "info", 5000);
     const serials = Array.from({ length: 100 }, (_, i) => `A-${200 + i}`);
     const stages = manufacturingStages.sort((a, b) => a.order - b.order);
 
-    serials.forEach((sn, idx) => {
+    for (const [idx, sn] of serials.entries()) {
         // Distribute: 85 Pass, 10 Scrap/MRB, 5 WIP
         let status = "COMPLETED";
         let currOrder = stages.length;
@@ -954,32 +960,57 @@ function generateMockShiftData() {
 
         const unit = { serial: sn, status: status, currentStageOrder: currOrder, history: [], components: {} };
 
-        // Build History
         for (let o = 1; o <= currOrder; o++) {
             const stage = stages.find(s => s.order === o);
             unit.history.push({
                 stage: stage.name,
                 status: (o === currOrder && status === "MRB_REVIEW") ? "SCRAP" : "PASS",
-                operator: "Sim. Bot " + (idx % 3 + 1),
+                operator: "System Bot",
                 time: new Date().toLocaleTimeString()
             });
         }
-        units[sn] = unit;
-    });
 
-    // Sync Yield Stats for today
-    if (yieldData.inspected.length > 0) {
-        const last = yieldData.inspected.length - 1;
-        yieldData.inspected[last] = 100;
-        yieldData.passed[last] = 85;
-        yieldData.scrapped[last] = 10;
+        // ADD to ledger (Don't clear it)
+        units[sn] = unit;
+
+        // INCREMENT yield counters in real-time
+        if (yieldData.inspected.length > 0) {
+            const lastIdx = yieldData.inspected.length - 1;
+            yieldData.inspected[lastIdx]++;
+            if (status === "COMPLETED") yieldData.passed[lastIdx]++;
+            if (status === "MRB_REVIEW") yieldData.scrapped[lastIdx]++;
+        }
+
+        // 🪐 CLOUD OVERHEAT PROTECTION: We push to Audit log but skip full persist per-unit to keep UI snappy
+        globalAuditLog.push({
+            event: status === "MRB_REVIEW" ? "UNIT_SCRAP" : "UNIT_PASS",
+            details: `S/N ${sn} ${status.toLowerCase()} at final checkpoint.`,
+            time: new Date().toLocaleString(),
+            op: "Simulation Engine"
+        });
+
+        // 🔄 TRIGGER LIVE UI UPDATES (The "Show" part)
+        updateAdminGauges();
+        updateAuditFeed();
+        updateStageHeatmap('stage-yield-heat-map');
+
+        // Visual processing delay (350ms per unit)
+        await new Promise(r => setTimeout(r, 350));
+
+        // Stop if Admin navigates away
+        if (!document.getElementById('sim-trigger-btn')) break;
     }
 
+    // Final Save
     persistUnits();
     persistYieldData();
-    pushAudit("SIM_SHIFT", "Admin triggered 100-unit stress test simulation.");
-    showToast("✅ 100-Unit Stress Test Complete. Gauges Updated.", "success");
-    render('adminDashboard');
+    persistAudit();
+    showToast("✅ PRODUCTION STREAM COMPLETE: Shift totals synchronized.", "success");
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="play-circle" style="width:16px;"></i> Restart Stream Simulation';
+        lucide.createIcons();
+    }
 }
 
 /** 📊 DASHBOARD LIVE GAUGE LOGIC 🛰️ */
