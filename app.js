@@ -1933,7 +1933,7 @@ function populateUserList() {
     if (!body) return;
 
     body.innerHTML = usersData.map(u => `
-    < tr >
+    <tr >
             <td><strong>${u.name}</strong></td>
             <td><code style="background:var(--border); padding:2px 6px; border-radius:4px;">${u.accessId}</code></td>
             <td><span class="badge ${u.role === 'admin' ? 'badge-primary' : 'badge-success'}">${u.role.toUpperCase()}</span></td>
@@ -1977,12 +1977,12 @@ function updateAuditFeed() {
     const recentLogs = globalAuditLog.slice(-10).reverse(); // Last 10 events
 
     if (recentLogs.length === 0) {
-        list.innerHTML = `< tr > <td colspan="4" class="text-center text-muted" style="padding:2rem;">Waiting for factory production events...</td></tr > `;
+        list.innerHTML = `<tr > <td colspan="4" class="text-center text-muted" style="padding:2rem;">Waiting for factory production events...</td></tr > `;
         return;
     }
 
     list.innerHTML = recentLogs.map(log => `
-    < tr style = "border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : (log.event.includes('REWORK') ? 'var(--warning)' : 'var(--success)')}" >
+    <tr style="border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : (log.event.includes('REWORK') ? 'var(--warning)' : 'var(--success)')}" >
             <td><strong style="color:var(--text-bright);">${log.details.split(' ')[1] || '---'}</strong></td>
             <td><span class="badge" style="background:rgba(255,255,255,0.05); font-size:0.6rem;">${log.event.split('_')[0]}</span></td>
             <td style="font-size:0.75rem;">${log.details}</td>
@@ -1998,7 +1998,7 @@ function updateOpLeague() {
         const total = u.stats.passed + u.stats.scrapped;
         const eff = total === 0 ? 0 : (u.stats.passed / total * 100).toFixed(0);
         return `
-    < tr >
+    <tr >
                 <td><strong>${u.name}</strong></td>
                 <td><span class="badge badge-success">OPERATOR</span></td>
                 <td style="color:var(--success); font-weight:800;">+${u.stats.passed}</td>
@@ -2020,7 +2020,7 @@ function updateOpLeague() {
 function showToast(msg, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = `toast toast - ${type} `;
+    toast.className = `toast toast-${type} `;
 
     let icon = 'info';
     if (type === 'success') icon = 'check-circle';
@@ -2028,7 +2028,7 @@ function showToast(msg, type = 'info', duration = 4000) {
     if (type === 'warning') icon = 'alert-triangle';
 
     toast.innerHTML = `
-    < i data - lucide="${icon}" style = "width:20px;" ></i >
+    <i data-lucide="${icon}" style = "width:20px;" ></i >
         <div style="flex:1; font-size:0.85rem; font-weight:600;">${msg}</div>
         <i data-lucide="x" style="width:14px; opacity:0.5;"></i>
 `;
