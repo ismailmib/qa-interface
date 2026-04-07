@@ -634,60 +634,34 @@ const templates = {
             </div>
         </div>
     `,
-    analytics: `
+    traceability: `
         <div class="animate-fade">
-             <div class="view-header">
+            <div class="view-header">
                 <div>
-                    <h2 class="view-title-main">Enterprise Manufacturing Analytics</h2>
-                    <p class="text-muted">Impact gap analysis: System Performance vs Manual Heritage</p>
+                    <h2 class="view-title-main">Production Ledger & Traceability</h2>
+                    <p class="text-muted">Comprehensive history and real-time status of every unit</p>
                 </div>
             </div>
 
-            <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem;">
-                 <div class="card glass">
-                    <div class="stat-label">System-Wide FPY</div>
-                    <div class="stat-value" style="color:var(--success)">98.8%</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">TARGET: 98.5% ✅</div>
-                 </div>
-                 <div class="card glass">
-                    <div class="stat-label">Gap vs Manual Era</div>
-                    <div class="stat-value" style="color:var(--primary)">+11.7%</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% BASELINE</div>
-                 </div>
-                 <div class="card glass">
-                    <div class="stat-label">Units/Hour (Current)</div>
-                    <div class="stat-value">54.2</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--success); margin-top:0.5rem;">PEAK PERFORMANCE</div>
-                 </div>
-                 <div class="card glass">
-                    <div class="stat-label">Waste Reduction</div>
-                    <div class="stat-value" style="color:var(--accent)">-82%</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">MATERIAL LOSS REDUCED</div>
-                 </div>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="card glass">
-                    <h3 class="section-title-sm">Operational Conversion Summary</h3>
-                    <div id="analytics-conversion-chart" style="height:350px; display:flex; align-items:flex-end; gap:30px; padding: 20px 10px;">
-                        <!-- Dynamic Charts injected here -->
+            <div class="card glass" style="margin-bottom: 2rem;">
+                <div class="flex flex-col gap-5">
+                    <div class="flex gap-4">
+                        <input type="text" id="search-serial" placeholder="Lookup Serial (e.g. B-101) for full heritage drill-down..." style="flex: 1;">
+                        <button class="btn btn-primary" onclick="searchUnit()"><i data-lucide="search" style="width:18px"></i> Trace Unit</button>
                     </div>
-                    <div class="flex justify-between items-center" style="border-top:1px solid var(--border); padding-top:1.5rem;">
-                         <div class="flex items-center gap-4">
-                            <div class="flex items-center gap-2"><div style="width:12px; height:12px; background:var(--primary); border-radius:2px;"></div> <span style="font-size:0.7rem; font-weight:800;">PASS UNITS</span></div>
-                            <div class="flex items-center gap-2"><div style="width:12px; height:12px; background:var(--error); border-radius:2px;"></div> <span style="font-size:0.7rem; font-weight:800;">LOSS/SCRAP</span></div>
-                         </div>
-                         <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700;">6-MONTH HISTORICAL TREND</div>
-                    </div>
-                </div>
-
-                <div class="card glass">
-                    <h3 class="section-title-sm">Stage-Wise Performance Heatmap</h3>
-                    <div id="analytics-heatmap" class="flex flex-col gap-6">
-                        <!-- Heatmap bars injected here -->
+                    <div class="flex flex-wrap gap-x-8 gap-y-4 items-center" style="font-size: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                        <span class="text-muted" style="font-weight: 800;">QUICK FILTERS:</span>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="all" checked onchange="runLiveFilter()"> All Units</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="mrb" onchange="runLiveFilter()"><span style="color:var(--error); font-weight:800;">Pending Review (MRB)</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="wip" onchange="runLiveFilter()"> WIP</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="passed" onchange="runLiveFilter()"> Passed</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="scrap" onchange="runLiveFilter()"> Scrap</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="rework" onchange="runLiveFilter()"> Rework</label>
                     </div>
                 </div>
             </div>
+
+            <div id="trace-result-area"></div>
         </div>
     `,
     userManagement: `
