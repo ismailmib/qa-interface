@@ -1110,16 +1110,47 @@ function validateUnitGate() {
         return;
     }
 
-    // Pass-to-Proceed Check (only for normal units, not rework)
+    // Pass-to-Proceed Check (Smart Guidance)
     if (unit.currentStageOrder < activeExecutionStage.order) {
-        showError(`STATION LOCKED: Unit ${sn} hasn't passed previous stage.`, "lock");
-        document.getElementById('gate-msg').innerHTML += `<button class="btn btn-outline" style="margin-top: 10px; color: var(--warning); border-color: var(--warning);" onclick="triggerOverride()"><i data-lucide="shield-alert" style="width:14px"></i> Supervisor Override</button>`;
+        const nextReqStage = manufacturingStages.find(s => s.order === unit.currentStageOrder);
+        msgArea.innerHTML = `
+            <div class="flex flex-col gap-2 items-center">
+                <div style="font-weight:900; color:var(--error);"><i data-lucide="lock" style="width:16px;vertical-align:middle;"></i> SEQUENCE LOCKED: UNIT AT WRONG STATION</div>
+                <div style="font-size:0.8rem; margin-bottom:0.5rem;">This unit is currently at <strong>${nextReqStage.name}</strong>. Proceeding here is forbidden.</div>
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" style="padding:0.5rem 1rem; font-size:0.75rem;" onclick="jumpToCorrectStage(${nextReqStage.order}, '${sn}')">
+                        <i data-lucide="arrow-right-circle" style="width:14px"></i> Switch to ${nextReqStage.name}
+                    </button>
+                    <button class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem; border-color:var(--warning); color:var(--warning);" onclick="triggerOverride()">
+                        <i data-lucide="shield-alert" style="width:14px"></i> Override
+                    </button>
+                </div>
+            </div>`;
+        msgArea.style.background = 'rgba(239, 68, 68, 0.1)';
+        msgArea.style.color = 'var(--error)';
+        msgArea.style.border = '1px solid var(--error)';
+        msgArea.classList.remove('hidden');
         lucide.createIcons();
         return;
     }
 
     if (unit.currentStageOrder > activeExecutionStage.order) {
-        showError(`ALREADY PROCESSED: Unit ${sn} has already passed this stage.`, "check-circle");
+        const lastPassedStage = manufacturingStages.find(s => s.order === unit.currentStageOrder - 1);
+        const stageName = lastPassedStage ? lastPassedStage.name : 'Unknown';
+
+        msgArea.innerHTML = `
+            <div class="flex flex-col gap-2 items-center">
+                <div style="font-weight:900; color:var(--success);"><i data-lucide="check-circle" style="width:16px;vertical-align:middle;"></i> ALREADY PROCESSED</div>
+                <div style="font-size:0.8rem; margin-bottom:0.5rem;">Unit ${sn} has already passed this stage. Current Status: Ready for Next.</div>
+                <button class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem;" onclick="jumpToCorrectStage(${unit.currentStageOrder}, '${sn}')">
+                    <i data-lucide="move-right" style="width:14px"></i> Advance to Next Station
+                </button>
+            </div>`;
+        msgArea.style.background = 'rgba(16, 185, 129, 0.1)';
+        msgArea.style.color = 'var(--success)';
+        msgArea.style.border = '1px solid var(--success)';
+        msgArea.classList.remove('hidden');
+        lucide.createIcons();
         return;
     }
 
@@ -1145,6 +1176,46 @@ function validateUnitGate() {
     setTimeout(() => {
         render('executionScreen', 'Inspection Gate', activeExecutionStage.name);
     }, 2000); // ⏳ Increased from 800ms
+}
+
+function jumpToCorrectStage(order, sn) {
+    const targetStage = manufacturingStages.find(s => s.order === order);
+    if (!targetStage) return;
+
+    // Switch context
+    activeExecutionStage = targetStage;
+
+    // 1. Return to the stage selector logic
+    showToast(`Routing to correct station: ${targetStage.name}`, "info");
+
+    // 2. We essentially "click" that stage in the background
+    // and re-open the gate section
+    render('operatorDashboard', 'Execution Gate', 'Station');
+    setupExecutionGate(targetStage.id);
+
+    // 3. Pre-fill the serial number again for the operator so they just click "Authorize"
+    setTimeout(() => {
+        const input = document.getElementById('unit-scan-input');
+        if (input) {
+            input.value = sn;
+            // Optionally auto-validate? Better to let them click
+        }
+    }, 500);
+}
+
+function setupExecutionGate(stageId) {
+    const stage = manufacturingStages.find(s => s.id === stageId);
+    activeExecutionStage = stage;
+    activeExecutionUnit = null; // Clear any previous unit context
+
+    document.getElementById('execution-gate-area').classList.remove('hidden');
+    document.getElementById('gate-stage-name').textContent = stage.name;
+    document.getElementById('unit-scan-input').value = '';
+    document.getElementById('unit-scan-input').focus();
+    document.getElementById('gate-msg').classList.add('hidden');
+
+    // Scroll smoothly to the gate area
+    document.getElementById('execution-gate-area').scrollIntoView({ behavior: 'smooth' });
 }
 
 function triggerOverride() {
