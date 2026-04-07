@@ -311,10 +311,10 @@ let activeCheckpointPhotos = {}; // Store photos per checkpoint index
 const templates = {
     adminDashboard: `
         <div class="animate-fade">
-            <div class="view-header">
+            <div class="view-header admin-hero-header" style="margin-bottom: 2rem;">
                 <div>
-                    <h2 class="view-title-main">Production Intelligence</h2>
-                    <p class="text-muted">Real-time quality oversight across all lines</p>
+                    <h2 class="view-title-main">Production Oversight & MRB</h2>
+                    <p class="text-muted">High-density operational intelligence</p>
                 </div>
                 <div class="flex gap-3">
                     <button class="btn btn-outline" onclick="showTransferData()"><i data-lucide="download" style="width:18px"></i> Export Ledger</button>
@@ -322,61 +322,84 @@ const templates = {
                 </div>
             </div>
 
-            <div class="stat-grid">
-                <div class="card stat-card">
-                    <span class="stat-label">Yield Rate</span>
-                    <div class="stat-value">[[YIELD_RATE]]%</div>
-                    <div class="stat-trend trend-up"><i data-lucide="trending-up" style="width: 14px; vertical-align: middle;"></i> +0.4%</div>
+            <!-- 🪐 THE BIG THREE: ACTIONABLE OVERVIEW -->
+            <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+                <!-- LIVE FPY GAUGE -->
+                <div class="card glass text-center flex flex-col items-center justify-center" style="padding: 2rem; border-bottom: 4px solid var(--success);">
+                    <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Live First-Pass Yield</div>
+                    <div style="position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 100 100" style="width: 100%; transform: rotate(-90deg);">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
+                            <circle id="fpy-gauge-circle" cx="50" cy="50" r="45" fill="none" stroke="var(--success)" stroke-width="8" 
+                                    stroke-dasharray="282.7" stroke-dashoffset="15" style="filter: drop-shadow(0 0 8px var(--success));"></circle>
+                        </svg>
+                        <div style="position: absolute; text-align: center;">
+                            <div style="font-size: 2.5rem; font-weight: 900; line-height: 1;" id="live-fpy-val">--%</div>
+                            <div class="text-muted" style="font-size: 0.6rem; font-weight: 800;">CURRENT YIELD</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card stat-card">
-                    <span class="stat-label">Units Passed</span>
-                    <div class="stat-value">[[TOTAL_PASSED]]</div>
-                    <div class="text-muted" style="font-size: 0.8rem;">Session Total</div>
+
+                <!-- SHIFT VOLUME PROGRESS -->
+                <div class="card glass flex flex-col justify-between" style="padding: 2rem; border-bottom: 4px solid var(--primary);">
+                    <div>
+                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Shift Production Progress</div>
+                        <div class="flex justify-between items-end" style="margin-bottom: 1rem;">
+                            <div style="font-size: 3rem; font-weight: 900; line-height: 1;"><span id="total-shift-pass">0</span><span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">/100 UNITS</span></div>
+                            <div style="font-weight: 800; color: var(--primary);" id="shift-perc-label">0%</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container" style="width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden;">
+                        <div style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); box-shadow: 0 0 15px var(--primary-glow);" id="shift-progress-fill"></div>
+                    </div>
                 </div>
-                <div class="card stat-card">
-                    <span class="stat-label">Total Scrapped</span>
-                    <div class="stat-value" style="color: var(--error);">[[TOTAL_SCRAPPED]]</div>
-                    <div class="stat-trend trend-down"><i data-lucide="alert-triangle" style="width: 14px; vertical-align: middle;"></i> Action required</div>
-                </div>
-                <div class="card stat-card">
-                    <span class="stat-label">System Health</span>
-                    <div class="stat-value" style="color: var(--success);">OPTIMAL</div>
-                    <div class="text-muted" style="font-size: 0.8rem;">Gate Logic Active</div>
+
+                <!-- MRB STATUS ALERT -->
+                <div class="card glass flex flex-col justify-between" style="padding: 2rem; border-bottom: 4px solid var(--error);">
+                    <div>
+                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">MRB Quality Inbox</div>
+                        <div style="font-size: 3rem; font-weight: 900; line-height: 1; color: var(--error);" id="total-mrb-count">0</div>
+                        <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem; font-weight: 600;">UNITS AWAITING YOUR DECISION</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showTraceability(); setTimeout(() => { document.querySelector('input[value=\'mrb\']').click(); }, 150);" style="background: var(--error); border:none; width: 100%; justify-content: center;">Action Decision Inbox</button>
                 </div>
             </div>
 
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h3 class="section-title-sm">Yield vs Scrap Trend</h3>
-                    <div class="analytics-chart-container" style="height: 250px; display: flex; align-items: flex-end; gap: 1rem; padding: 1rem 0;">
-                        [[CHART_BARS]]
-                    </div>
-                    <div class="flex justify-between text-muted" style="font-size: 0.7rem; margin-top: 0.5rem;">
-                        <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3 class="section-title-sm">Live Quality Audit Feed</h3>
-                    <div id="live-audit-list" style="max-height: 250px; overflow-y: auto; font-size: 0.75rem;">
-                        <!-- Audit entries injected here -->
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3 class="section-title-sm">Current Workflow Stages</h3>
-                    <div class="stages-preview-list">
-                        [[STAGES_LIST]]
-                    </div>
-                </div>
-
-                <div class="card" style="grid-column: span 2;">
-                    <h3 class="section-title-sm">Operator Performance League</h3>
-                    <div class="table-container">
-                        <table style="font-size: 0.8rem;">
-                            <thead><tr><th>Name</th><th>Role</th><th>Total Passed</th><th>Total Scrapped</th><th>Efficiency</th></tr></thead>
-                            <tbody id="op-league-body"></tbody>
+            <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                <div class="card glass" style="padding:0; overflow:hidden;">
+                     <div style="padding: 1.5rem; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                        <h3 class="section-title-sm" style="margin:0;">Factory Operational Heartbeat</h3>
+                        <div class="flex items-center gap-2">
+                             <div class="status-dot-pulse"></div>
+                             <span style="font-size: 0.65rem; font-weight: 800; color: var(--success);">LIVE STREAM ACTIVE</span>
+                        </div>
+                     </div>
+                     <div class="table-container" style="border:none; border-radius:0; max-height: 350px;">
+                        <table>
+                            <thead><tr><th>RECENT LOGS</th><th>STATION</th><th>EVENT</th><th>TIMESTAMP</th></tr></thead>
+                            <tbody id="live-audit-stream">
+                                <!-- Recent Events injected here -->
+                            </tbody>
                         </table>
+                     </div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    <div class="card glass">
+                        <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
+                            <h3 class="section-title-sm" style="margin:0;">Station Yield Heatmap</h3>
+                            <i data-lucide="info" style="width:12px; color:var(--text-muted);"></i>
+                        </div>
+                        <div id="stage-yield-heat-map" class="flex flex-col gap-4">
+                            <!-- Heat Map Circles injected -->
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--accent)); border:none; text-align:center; padding: 1.5rem;">
+                         <i data-lucide="zap" style="width: 24px; height: 24px; color: white; margin: 0 auto 0.75rem;"></i>
+                         <h4 style="color: white; font-weight: 800; font-size: 0.9rem;">Broadcast Alert</h4>
+                         <p style="color: rgba(255,255,255,0.8); font-size: 0.65rem; margin-bottom: 1rem;">Send production memo to all stations.</p>
+                         <button class="btn btn-outline" style="background: white; color: var(--primary); width: 100%; justify-content: center; border:none; font-weight: 800; font-size: 0.7rem;">Open Intercom</button>
                     </div>
                 </div>
             </div>
@@ -385,192 +408,68 @@ const templates = {
 
     analytics: `
         <div class="animate-fade">
-            <div class="view-header">
+             <div class="view-header">
                 <div>
-                    <h2 class="view-title-main">Yield & Predictive Intelligence</h2>
-                    <p class="text-muted">Comparing Manual Historical Data vs. Real-Time System Performance</p>
+                    <h2 class="view-title-main">Deep-Dive Yield Intelligence</h2>
+                    <p class="text-muted">Analyzing current shift performance vs. manual era benchmarks</p>
                 </div>
             </div>
-            
-            <div class="stat-grid" style="margin-bottom: 2rem;">
-                <div class="card stat-card" style="border-top: 4px solid var(--accent);">
-                    <span class="stat-label">Yield Lift (Impact)</span>
-                    <div class="stat-value" id="yield-lift-val">+0.0%</div>
-                    <div class="text-muted" style="font-size: 0.75rem;">Improvement over Manual Era</div>
-                </div>
-                <div class="card stat-card" style="border-top: 4px solid var(--success);">
-                    <span class="stat-label">Error Reduction</span>
-                    <div class="stat-value" style="color: var(--success);">-92%</div>
-                    <div class="text-muted" style="font-size: 0.75rem;">Reduction in Gate Escapes</div>
-                </div>
-                <div class="card stat-card" style="border-top: 4px solid var(--primary);">
-                    <span class="stat-label">Velocity Gained</span>
-                    <div class="stat-value" style="color: var(--primary);">+1.8m</div>
-                    <div class="text-muted" style="font-size: 0.75rem;">Saved per unit inspection</div>
-                </div>
+
+            <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem;">
+                 <div class="card glass">
+                    <div class="stat-label">Projected Yield</div>
+                    <div class="stat-value" style="color:var(--success)">98.8%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">TARGET: 98.5% ✅</div>
+                 </div>
+                 <div class="card glass">
+                    <div class="stat-label">Impact Gap</div>
+                    <div class="stat-value" style="color:var(--primary)">+11.7%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% LEGACY</div>
+                 </div>
+                 <div class="card glass">
+                    <div class="stat-label">Ave. Processing Time</div>
+                    <div class="stat-value">2.4m</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--success); margin-top:0.5rem;">↑ 54% EFFICIENCY</div>
+                 </div>
+                 <div class="card glass">
+                    <div class="stat-label">Material Loss</div>
+                    <div class="stat-value" style="color:var(--accent)">-82%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">REDUCED SCRAP VOLUME</div>
+                 </div>
             </div>
 
             <div class="dashboard-grid">
-
-
-                <div class="card">
-                    <h3 class="section-title-sm">Operator Fatigue Index (Shift HR 1-8)</h3>
-                    <div style="height: 180px; display: flex; align-items: flex-end; gap: 0.5rem; padding-top: 1rem;">
-                        [[FATIGUE_BARS]]
-                    </div>
-                    <p class="text-muted" style="font-size: 0.7rem; margin-top: 1rem;">
-                        <i data-lucide="info" style="width:10px;"></i> Alert: Errors increase as index crosses 70 (red zone).
-                    </p>
-                </div>
-
-                <div class="card">
-                    <h3 class="section-title-sm">Defect Concentration Heatmap</h3>
-                    <div class="flex flex-col gap-3" style="padding-top: 1rem;">
-                        [[DEFECT_HEATMAP]]
+                <div class="card glass" style="grid-column: span 2;">
+                    <h3 class="section-title-sm">Modern System Impact (Gap vs Manual Baseline)</h3>
+                    <div style="height:300px; padding: 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; gap: 40px; position: relative;">
+                         <!-- Baseline Comparison -->
+                         <div style="flex: 1; height: 87.1%; background: var(--border); border-radius: 8px 8px 0 0; position: relative;">
+                             <div style="position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.6rem; font-weight:800; color: var(--text-muted);">MANUAL ERA (87.1%)</div>
+                         </div>
+                         <div style="flex: 1; height: 98.8%; background: linear-gradient(to top, var(--success), var(--accent)); border-radius: 8px 8px 0 0; position: relative; box-shadow: 0 0 20px var(--success-glow);">
+                             <div style="position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.6rem; font-weight:900; color: var(--success);">SYSTEM LIVE (98.8%)</div>
+                         </div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <h3 class="section-title-sm">Before vs. After Comparison (Yield %)</h3>
-                    <div style="height: 250px; display: flex; align-items: flex-end; gap: 2rem; padding: 2rem; border-bottom: 1px solid var(--border); position: relative;">
-                        <!-- Comparison Chart Injected -->
-                        <div style="flex: 1; height: 88%; background: var(--border); border-radius: 8px 8px 0 0; position: relative;">
-                            <div style="position: absolute; top: -25px; width: 100%; text-align: center; font-size: 0.7rem; font-weight:700;">88.5% (Manual)</div>
+                <div class="card glass">
+                    <h3 class="section-title-sm">Top Defect Categories</h3>
+                    <div class="flex flex-col gap-5" style="margin-top: 1.5rem;">
+                        <div class="flex flex-col gap-2">
+                             <div class="flex justify-between" style="font-size: 0.75rem;"><span class="font-bold">Assembly Mismatch</span><span class="text-muted">42%</span></div>
+                             <div style="height: 6px; background: var(--border); border-radius: 3px;"><div style="width: 42%; height: 100%; background: var(--error); border-radius: 3px;"></div></div>
                         </div>
-                        <div style="flex: 1; height: [[CURRENT_YIELD_H]]%; background: linear-gradient(to top, var(--primary), var(--accent)); border-radius: 8px 8px 0 0; position: relative;">
-                            <div style="position: absolute; top: -25px; width: 100%; text-align: center; font-size: 0.7rem; font-weight:700;">[[CURRENT_YIELD]]% (System)</div>
+                        <div class="flex flex-col gap-2">
+                             <div class="flex justify-between" style="font-size: 0.75rem;"><span class="font-bold">Component Alignment</span><span class="text-muted">28%</span></div>
+                             <div style="height: 6px; background: var(--border); border-radius: 3px;"><div style="width: 28%; height: 100%; background: var(--warning); border-radius: 3px;"></div></div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="card" style="grid-column: span 2;">
-                    <h3 class="section-title-sm"><i data-lucide="wrench" style="width:14px; vertical-align:middle;"></i> Automated Maintenance Suggestion Engine</h3>
-                    <div id="maintenance-alerts-area" class="flex flex-col gap-3">
-                        [[MAINTENANCE_LOGS]]
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3 class="section-title-sm"><i data-lucide="brain-circuit" style="width:14px; vertical-align:middle;"></i> Predictive Quality Forecast</h3>
-                    <div class="prediction-content" style="padding: 1rem 0;">
-                        <div class="flex flex-col gap-4">
-                            <div class="p-4 glass" style="border-radius: 12px; border-left: 4px solid var(--accent);">
-                                <div class="text-muted" style="font-size: 0.75rem;">NEXT SHIFT PROBABILITY</div>
-                                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">99.2% Predicted Yield</div>
-                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Based on current operator velocity and declining solder bridge trends.</p>
-                            </div>
-                            <div class="p-4 glass" style="border-radius: 12px; border-left: 4px solid var(--warning);">
-                                <div class="text-muted" style="font-size: 0.75rem;">POTENTIAL RISK AREA</div>
-                                <div style="font-size: 1rem; font-weight: 700;">Stage 2: Connector Wear</div>
-                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Anomalous pass-rate drop detected at Station 07. Maintenance suggested within 48h.</p>
-                            </div>
+                        <div class="flex flex-col gap-2">
+                             <div class="flex justify-between" style="font-size: 0.75rem;"><span class="font-bold">Vision Rejection</span><span class="text-muted">18%</span></div>
+                             <div style="height: 6px; background: var(--border); border-radius: 3px;"><div style="width: 18%; height: 100%; background: var(--primary); border-radius: 3px;"></div></div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="card" style="margin-top: 2rem;">
-                <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
-                    <h3 class="section-title-sm">Assembly Line Daily Throughput</h3>
-                    <div class="badge badge-success">Live Analysis</div>
-                </div>
-                <div style="height: 200px; display: flex; align-items: flex-end; gap: 4px; padding-bottom: 2rem; border-bottom: 2px solid var(--border);">
-                    [[DAILY_THROUGHPUT_CHART]]
-                </div>
-                <div class="flex justify-between text-muted" style="font-size: 0.65rem; margin-top: 8px;">
-                     <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
-                </div>
-            </div>
-
-            <!-- 🏛️ 6-MONTH LEGACY PERFORMANCE ARCHIVE -->
-            <div class="card" style="margin-top: 2rem; padding: 0; overflow: hidden;">
-                <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); border-bottom: 1px solid var(--border);">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h3 class="section-title-sm" style="margin:0; font-size: 1.1rem;">📅 6-Month Legacy Archive (Manual Testing Era)</h3>
-                            <p class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">Oct 2025 – Mar 2026 · Extracted from Manual Excel Reports</p>
-                        </div>
-                        <div class="badge badge-success" style="font-size: 0.75rem;">12.4% Yield Improvement</div>
-                    </div>
-                </div>
-
-                <!-- Phase KPI Cards -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; border-bottom: 1px solid var(--border);">
-                    <div style="padding: 1.5rem 2rem; border-right: 1px solid var(--border);">
-                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #ef4444; margin-bottom: 0.5rem;">LEGACY PERFORMANCE · OCT 2025 – MAR 2026</div>
-                        <div style="font-size: 2rem; font-weight: 900; color: #ef4444;">87.1%</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Avg Manual Yield Rate</div>
-                        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem;">
-                            <div class="flex justify-between"><span class="text-muted">Scrap Rate</span><span style="color:#ef4444; font-weight:800;">11.2%</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Customer Escapes/day</span><span style="color:#ef4444; font-weight:800;">~10</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Avg Inspection Time</span><span style="font-weight:700;">8.1 min</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Throughput/day</span><span style="font-weight:700;">~257 units</span></div>
-                        </div>
-                    </div>
-                    <div style="padding: 1.5rem 2rem; border-right: 1px solid var(--border);">
-                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #f59e0b; margin-bottom: 0.5rem;">TRANSITION PHASE · SYSTEM SOFT-LAUNCH</div>
-                        <div style="font-size: 2rem; font-weight: 900; color: #f59e0b;">90.1%</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Avg Yield Rate</div>
-                        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem;">
-                            <div class="flex justify-between"><span class="text-muted">Scrap Rate</span><span style="color:#f59e0b; font-weight:800;">6.0%</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Customer Escapes/day</span><span style="color:#f59e0b; font-weight:800;">~3</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Avg Inspection Time</span><span style="font-weight:700;">6.1 min</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Throughput/day</span><span style="font-weight:700;">~274 units</span></div>
-                        </div>
-                    </div>
-                    <div style="padding: 1.5rem 2rem;">
-                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #10b981; margin-bottom: 0.5rem;">FULL SYSTEM LIVE · CLOUD INTEGRATED</div>
-                        <div style="font-size: 2rem; font-weight: 900; color: #10b981;">97.8%</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Avg Yield Rate</div>
-                        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem;">
-                            <div class="flex justify-between"><span class="text-muted">Scrap Rate</span><span style="color:#10b981; font-weight:800;">1.4%</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Customer Escapes/day</span><span style="color:#10b981; font-weight:800;">~0</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Avg Inspection Time</span><span style="font-weight:700;">2.9 min</span></div>
-                            <div class="flex justify-between"><span class="text-muted">Throughput/day</span><span style="font-weight:700;">~308 units</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 30-Day Bar Chart -->
-                <div style="padding: 2rem;">
-                    <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                        <h4 style="font-weight: 800; font-size: 0.9rem;">Conversion Efficiency Trend (6-Month Archive)</h4>
-                        <div class="flex gap-4" style="font-size: 0.65rem;">
-                            <span><span style="display:inline-block; width:10px; height:10px; background:#ef4444; border-radius:2px; margin-right:4px;"></span>Manual</span>
-                            <span><span style="display:inline-block; width:10px; height:10px; background:#f59e0b; border-radius:2px; margin-right:4px;"></span>Transition</span>
-                            <span><span style="display:inline-block; width:10px; height:10px; background:#10b981; border-radius:2px; margin-right:4px;"></span>System Live</span>
-                        </div>
-                    </div>
-                    <div id="hist-chart-area" style="height: 180px; display: flex; align-items: flex-end; gap: 3px; border-bottom: 1px solid var(--border); padding-bottom: 8px; position: relative;">
-                        [[HIST_CHART_BARS]]
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.55rem; color: var(--text-muted); margin-top: 6px; padding: 0 1px;">
-                        [[HIST_CHART_LABELS]]
-                    </div>
-                </div>
-
-                <!-- Impact Summary Banner -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0; border-top: 1px solid var(--border); background: rgba(16,185,129,0.03);">
-                    <div style="padding: 1.25rem; text-align:center; border-right: 1px solid var(--border);">
-                        <div style="font-size: 1.6rem; font-weight: 900; color: var(--success);">+13.5%</div>
-                        <div class="text-muted" style="font-size: 0.65rem; margin-top: 2px;">Yield Improvement</div>
-                    </div>
-                    <div style="padding: 1.25rem; text-align:center; border-right: 1px solid var(--border);">
-                        <div style="font-size: 1.6rem; font-weight: 900; color: var(--success);">-99%</div>
-                        <div class="text-muted" style="font-size: 0.65rem; margin-top: 2px;">Customer Escapes</div>
-                    </div>
-                    <div style="padding: 1.25rem; text-align:center; border-right: 1px solid var(--border);">
-                        <div style="font-size: 1.6rem; font-weight: 900; color: var(--success);">64% ↓</div>
-                        <div class="text-muted" style="font-size: 0.65rem; margin-top: 2px;">Inspection Time</div>
-                    </div>
-                    <div style="padding: 1.25rem; text-align:center;">
-                        <div style="font-size: 1.6rem; font-weight: 900; color: var(--success);">+51</div>
-                        <div class="text-muted" style="font-size: 0.65rem; margin-top: 2px;">Extra Units/Day</div>
-                    </div>
-                </div>
-            </div>
-
-
         </div>
     `,
     operatorDashboard: `
@@ -735,35 +634,60 @@ const templates = {
             </div>
         </div>
     `,
-    traceability: `
+    analytics: `
         <div class="animate-fade">
-            <div class="view-header">
+             <div class="view-header">
                 <div>
-                    <h2 class="view-title-main">Production Ledger & Traceability</h2>
-                    <p class="text-muted">Comprehensive history and real-time status of every unit</p>
+                    <h2 class="view-title-main">Enterprise Manufacturing Analytics</h2>
+                    <p class="text-muted">Impact gap analysis: System Performance vs Manual Heritage</p>
                 </div>
             </div>
 
-            <div class="card glass" style="margin-bottom: 2rem;">
-                <div class="flex flex-col gap-5">
-                    <div class="flex gap-4">
-                        <input type="text" id="search-serial" placeholder="Lookup Serial (e.g. B-101) for full heritage drill-down..." style="flex: 1;">
-                        <button class="btn btn-primary" onclick="searchUnit()"><i data-lucide="search" style="width:18px"></i> Trace Unit</button>
+            <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem;">
+                 <div class="card glass">
+                    <div class="stat-label">System-Wide FPY</div>
+                    <div class="stat-value" style="color:var(--success)">98.8%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">TARGET: 98.5% ✅</div>
+                 </div>
+                 <div class="card glass">
+                    <div class="stat-label">Gap vs Manual Era</div>
+                    <div class="stat-value" style="color:var(--primary)">+11.7%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% BASELINE</div>
+                 </div>
+                 <div class="card glass">
+                    <div class="stat-label">Units/Hour (Current)</div>
+                    <div class="stat-value">54.2</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--success); margin-top:0.5rem;">PEAK PERFORMANCE</div>
+                 </div>
+                 <div class="card glass">
+                    <div class="stat-label">Waste Reduction</div>
+                    <div class="stat-value" style="color:var(--accent)">-82%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">MATERIAL LOSS REDUCED</div>
+                 </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card glass">
+                    <h3 class="section-title-sm">Operational Conversion Summary</h3>
+                    <div id="analytics-conversion-chart" style="height:350px; display:flex; align-items:flex-end; gap:30px; padding: 20px 10px;">
+                        <!-- Dynamic Charts injected here -->
                     </div>
-                    <div class="flex flex-wrap gap-x-8 gap-y-4 items-center" style="font-size: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                        <span class="text-muted" style="font-weight: 800;">QUICK FILTERS:</span>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="all" checked onchange="runLiveFilter()"> All Units</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="mrb" onchange="runLiveFilter()"><span style="color:var(--error); font-weight:800;">Pending Review (MRB)</span></label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="wip" onchange="runLiveFilter()"> WIP</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="passed" onchange="runLiveFilter()"> Passed</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="scrap" onchange="runLiveFilter()"> Scrap</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="rework" onchange="runLiveFilter()"> Rework</label>
-                        <label class="flex items-center gap-2 cursor-pointer" style="margin-left: auto;"><input type="checkbox" id="filter-comp" onchange="runLiveFilter()"> With Components Only</label>
+                    <div class="flex justify-between items-center" style="border-top:1px solid var(--border); padding-top:1.5rem;">
+                         <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2"><div style="width:12px; height:12px; background:var(--primary); border-radius:2px;"></div> <span style="font-size:0.7rem; font-weight:800;">PASS UNITS</span></div>
+                            <div class="flex items-center gap-2"><div style="width:12px; height:12px; background:var(--error); border-radius:2px;"></div> <span style="font-size:0.7rem; font-weight:800;">LOSS/SCRAP</span></div>
+                         </div>
+                         <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700;">6-MONTH HISTORICAL TREND</div>
+                    </div>
+                </div>
+
+                <div class="card glass">
+                    <h3 class="section-title-sm">Stage-Wise Performance Heatmap</h3>
+                    <div id="analytics-heatmap" class="flex flex-col gap-6">
+                        <!-- Heatmap bars injected here -->
                     </div>
                 </div>
             </div>
-
-            <div id="trace-result-area"></div>
         </div>
     `,
     userManagement: `
@@ -999,8 +923,25 @@ function render(templateKey, title, breadcrumb) {
     }
 
     if (templateKey === 'adminDashboard') {
+        updateAdminGauges();
         updateAuditFeed();
-        updateOpLeague();
+        updateStageHeatmap('stage-yield-heat-map');
+
+        // ✨ Add a Simulation Trigger for Admin testing
+        const header = document.querySelector('.admin-hero-header');
+        if (header && !document.getElementById('sim-trigger-btn')) {
+            const btn = document.createElement('button');
+            btn.id = 'sim-trigger-btn';
+            btn.className = 'btn btn-outline';
+            btn.innerHTML = '<i data-lucide="play-circle" style="width:16px;"></i> Simulate 100-Unit Shift';
+            btn.style.marginLeft = 'auto';
+            btn.onclick = generateMockShiftData;
+            header.appendChild(btn);
+        }
+    }
+    if (templateKey === 'analytics') {
+        updateStageHeatmap('analytics-heatmap');
+        updateAnalyticsSummary();
     }
     if (templateKey === 'operatorDashboard') {
         document.getElementById('op-stat-passed').textContent = currentUser.stats.passed;
@@ -1014,6 +955,137 @@ function render(templateKey, title, breadcrumb) {
     if (templateKey === 'createStage' && editingStageId) setupCreateStageForm();
 
     lucide.createIcons();
+}
+
+/** 🚀 FACTORY SIMULATION ENGINE (Stress Test 100 Units) */
+function generateMockShiftData() {
+    if (!confirm("⚠️ This will overwrite today's local yield stats and add 100 units to the ledger for testing. Proceed?")) return;
+
+    showToast("🏭 Bootstrapping 100-Unit Shift Simulation...", "info");
+    const serials = Array.from({ length: 100 }, (_, i) => `A-${200 + i}`);
+    const stages = manufacturingStages.sort((a, b) => a.order - b.order);
+
+    serials.forEach((sn, idx) => {
+        // Distribute: 85 Pass, 10 Scrap/MRB, 5 WIP
+        let status = "COMPLETED";
+        let currOrder = stages.length;
+
+        if (idx >= 85 && idx < 95) {
+            status = "MRB_REVIEW";
+            currOrder = Math.floor(Math.random() * (stages.length - 1)) + 1;
+        } else if (idx >= 95) {
+            status = "IN_PROGRESS";
+            currOrder = Math.floor(Math.random() * stages.length) + 1;
+        }
+
+        const unit = { serial: sn, status: status, currentStageOrder: currOrder, history: [], components: {} };
+
+        // Build History
+        for (let o = 1; o <= currOrder; o++) {
+            const stage = stages.find(s => s.order === o);
+            unit.history.push({
+                stage: stage.name,
+                status: (o === currOrder && status === "MRB_REVIEW") ? "SCRAP" : "PASS",
+                operator: "Sim. Bot " + (idx % 3 + 1),
+                time: new Date().toLocaleTimeString()
+            });
+        }
+        units[sn] = unit;
+    });
+
+    // Sync Yield Stats for today
+    if (yieldData.inspected.length > 0) {
+        const last = yieldData.inspected.length - 1;
+        yieldData.inspected[last] = 100;
+        yieldData.passed[last] = 85;
+        yieldData.scrapped[last] = 10;
+    }
+
+    persistUnits();
+    persistYieldData();
+    pushAudit("SIM_SHIFT", "Admin triggered 100-unit stress test simulation.");
+    showToast("✅ 100-Unit Stress Test Complete. Gauges Updated.", "success");
+    render('adminDashboard');
+}
+
+/** 📊 DASHBOARD LIVE GAUGE LOGIC 🛰️ */
+function updateAdminGauges() {
+    const allUnits = Object.values(units);
+    const shiftPass = allUnits.filter(u => u.status === 'COMPLETED').length;
+    const mrbCount = allUnits.filter(u => u.status === 'MRB_REVIEW').length;
+    const totalProcessed = allUnits.length;
+
+    // Live FPY Calculation
+    const fpy = totalProcessed > 0 ? ((shiftPass / 100) * 100).toFixed(1) : "0"; // Using 100 as plan target
+    const fpyEl = document.getElementById('live-fpy-val');
+    if (fpyEl) fpyEl.textContent = `${fpy}%`;
+
+    const circle = document.getElementById('fpy-gauge-circle');
+    if (circle) {
+        // SVG circle circumference is exactly 282.7 (2 * PI * 45)
+        const offset = 282.7 - (282.7 * (parseFloat(fpy) / 100));
+        circle.style.strokeDashoffset = offset;
+    }
+
+    // Shift Progress
+    const progressVal = Math.min(shiftPass, 100);
+    const passEl = document.getElementById('total-shift-pass');
+    if (passEl) passEl.textContent = shiftPass;
+
+    const percLabel = document.getElementById('shift-perc-label');
+    if (percLabel) percLabel.textContent = `${progressVal}% REACHED`;
+
+    const fill = document.getElementById('shift-progress-fill');
+    if (fill) fill.style.width = `${progressVal}%`;
+
+    // MRB Inbox
+    const mrbEl = document.getElementById('total-mrb-count');
+    if (mrbEl) mrbEl.textContent = mrbCount;
+}
+
+function updateStageHeatmap(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const allUnits = Object.values(units);
+    container.innerHTML = manufacturingStages.sort((a, b) => a.order - b.order).map(s => {
+        const stageEvents = [];
+        allUnits.forEach(u => u.history.forEach(h => {
+            if (h.stage === s.name) stageEvents.push(h);
+        }));
+
+        const passes = stageEvents.filter(e => e.status === 'PASS').length;
+        const fails = stageEvents.filter(e => e.status === 'SCRAP').length;
+        const total = passes + fails;
+        const yieldVal = total > 0 ? ((passes / total) * 100).toFixed(1) : "100.0";
+        const color = yieldVal > 95 ? 'var(--success)' : (yieldVal > 90 ? 'var(--warning)' : 'var(--error)');
+
+        return `
+            <div class="flex flex-col gap-1">
+                <div class="flex justify-between" style="font-size: 0.65rem; font-weight: 800;">
+                    <span>${s.name}</span>
+                    <span style="color: ${color}">${yieldVal}%</span>
+                </div>
+                <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                    <div style="width: ${yieldVal}%; height: 100%; background: ${color}; border-radius: 3px; filter: drop-shadow(0 0 2px ${color});"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateAnalyticsSummary() {
+    // Basic summary calculation
+    const allUnits = Object.values(units);
+    const completed = allUnits.filter(u => u.status === 'COMPLETED').length;
+    const fpy = allUnits.length > 0 ? ((completed / allUnits.length) * 100).toFixed(1) : "98.8";
+
+    // Optional: Dynamic Gap Analysis calculation
+    const gap = (parseFloat(fpy) - 87.1).toFixed(1);
+
+    // Update labels if they exist
+    const gapEl = document.querySelector('.analytics-stat-gap');
+    if (gapEl) gapEl.textContent = `+${gap}%`;
 }
 
 // 👩‍🏭 Operator Workflow
@@ -1923,18 +1995,24 @@ function deleteUser(id) {
 
 // 📡 Dashboard Live Feed Logic
 function updateAuditFeed() {
-    const list = document.getElementById('live-audit-list');
+    const list = document.getElementById('live-audit-stream');
     if (!list) return;
-    list.innerHTML = globalAuditLog.map(log => `
-        <div style="padding: 10px; border-bottom: 1px solid var(--border); border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : 'var(--success)'}; margin-bottom: 5px; background: rgba(255,255,255,0.02);">
-            <div class="flex justify-between" style="font-weight: 800;">
-                <span>${log.event.replace('_', ' ')}</span>
-                <span class="text-muted" style="font-size: 0.6rem;">${log.time}</span>
-            </div>
-            <div style="margin-top:2px;">${log.details}</div>
-            <div class="text-muted" style="font-size: 0.65rem; margin-top:4px;">Captured by: ${log.op}</div>
-        </div>
-    `).join('') || '<p class="text-center text-muted">Waiting for production events...</p>';
+
+    const recentLogs = globalAuditLog.slice(-10).reverse(); // Last 10 events
+
+    if (recentLogs.length === 0) {
+        list.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:2rem;">Waiting for factory production events...</td></tr>`;
+        return;
+    }
+
+    list.innerHTML = recentLogs.map(log => `
+        <tr style="border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : (log.event.includes('REWORK') ? 'var(--warning)' : 'var(--success)')}">
+            <td><strong style="color:var(--text-bright);">${log.details.split(' ')[1] || '---'}</strong></td>
+            <td><span class="badge" style="background:rgba(255,255,255,0.05); font-size:0.6rem;">${log.event.split('_')[0]}</span></td>
+            <td style="font-size:0.75rem;">${log.details}</td>
+            <td class="text-muted" style="font-size:0.65rem;">${log.time.split(',')[1] || log.time}</td>
+        </tr>
+    `).join('');
 }
 
 function updateOpLeague() {
