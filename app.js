@@ -143,13 +143,20 @@ function updateCloudStatus(isActive, message) {
     const loginDot = document.getElementById('login-cloud-dot');
     const loginText = document.getElementById('login-cloud-text');
 
-    if (dot) dot.style.background = isActive ? 'var(--success)' : 'var(--error)';
-    if (text) text.textContent = isActive ? 'CLOUD SYNC ACTIVE' : 'CLOUD OFFLINE';
-    if (text) text.style.color = isActive ? 'var(--success)' : 'var(--error)';
+    const statusColor = isActive ? 'var(--success)' : (message && message.includes('CONN') ? 'var(--warning)' : 'var(--error)');
+    const statusText = message || (isActive ? 'CLOUD SYNC ACTIVE' : 'CLOUD OFFLINE');
 
-    if (loginDot) loginDot.style.background = isActive ? 'var(--success)' : 'var(--error)';
-    if (loginText) loginText.textContent = isActive ? (message || 'CLOUD SYNC VERIFIED') : 'CLOUD OFFLINE';
-    if (loginText) loginText.style.color = isActive ? 'var(--success)' : 'var(--error)';
+    if (dot) dot.style.background = statusColor;
+    if (text) {
+        text.textContent = statusText;
+        text.style.color = statusColor;
+    }
+
+    if (loginDot) loginDot.style.background = statusColor;
+    if (loginText) {
+        loginText.textContent = statusText;
+        loginText.style.color = statusColor;
+    }
 }
 
 // 🔋 INITIAL DATA SYNC ENGINE
@@ -1901,4 +1908,5 @@ function importExcelWorkflow(event) {
 
 // Init
 applyRoleRestrictions();
+initSystemCloudSync(); // 🚀 Cloud Handshake Heartbeat
 lucide.createIcons();
