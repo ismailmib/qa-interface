@@ -1110,19 +1110,21 @@ function validateUnitGate() {
         return;
     }
 
-    // Pass-to-Proceed Check (Smart Guidance)
+    // Pass-to-Proceed Check (Target Discovery)
     if (unit.currentStageOrder < activeExecutionStage.order) {
         const nextReqStage = manufacturingStages.find(s => s.order === unit.currentStageOrder);
         msgArea.innerHTML = `
             <div class="flex flex-col gap-2 items-center">
-                <div style="font-weight:900; color:var(--error);"><i data-lucide="lock" style="width:16px;vertical-align:middle;"></i> SEQUENCE LOCKED: UNIT AT WRONG STATION</div>
-                <div style="font-size:0.8rem; margin-bottom:0.5rem;">This unit is currently at <strong>${nextReqStage.name}</strong>. Proceeding here is forbidden.</div>
+                <div style="font-weight:900; color:var(--error); text-transform:uppercase;">🚨 SEQUENCE LOCKED: WRONG STATION</div>
+                <div style="font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">
+                    Unit ${sn} must first complete: <strong style="color:var(--primary); font-size:1rem;">${nextReqStage ? nextReqStage.name : 'Unknown Stage'}</strong>
+                </div>
                 <div class="flex gap-2">
-                    <button class="btn btn-primary" style="padding:0.5rem 1rem; font-size:0.75rem;" onclick="jumpToCorrectStage(${nextReqStage.order}, '${sn}')">
-                        <i data-lucide="arrow-right-circle" style="width:14px"></i> Switch to ${nextReqStage.name}
+                    <button class="btn btn-outline" style="padding:0.5rem 1.5rem; font-size:0.75rem; border-color:var(--warning); color:var(--warning);" onclick="triggerOverride()">
+                        <i data-lucide="shield-alert" style="width:14px"></i> Supervisor Override
                     </button>
-                    <button class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem; border-color:var(--warning); color:var(--warning);" onclick="triggerOverride()">
-                        <i data-lucide="shield-alert" style="width:14px"></i> Override
+                    <button class="btn btn-outline" style="padding:0.5rem 1.5rem; font-size:0.75rem;" onclick="document.getElementById('gate-msg').classList.add('hidden')">
+                        Close
                     </button>
                 </div>
             </div>`;
@@ -1135,16 +1137,15 @@ function validateUnitGate() {
     }
 
     if (unit.currentStageOrder > activeExecutionStage.order) {
-        const lastPassedStage = manufacturingStages.find(s => s.order === unit.currentStageOrder - 1);
-        const stageName = lastPassedStage ? lastPassedStage.name : 'Unknown';
+        const currentLoc = manufacturingStages.find(s => s.order === unit.currentStageOrder);
 
         msgArea.innerHTML = `
             <div class="flex flex-col gap-2 items-center">
                 <div style="font-weight:900; color:var(--success);"><i data-lucide="check-circle" style="width:16px;vertical-align:middle;"></i> ALREADY PROCESSED</div>
-                <div style="font-size:0.8rem; margin-bottom:0.5rem;">Unit ${sn} has already passed this stage. Current Status: Ready for Next.</div>
-                <button class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem;" onclick="jumpToCorrectStage(${unit.currentStageOrder}, '${sn}')">
-                    <i data-lucide="move-right" style="width:14px"></i> Advance to Next Station
-                </button>
+                <div style="font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">
+                    Unit ${sn} has already passed this stage. Current Location: <strong style="color:var(--primary); font-size:1rem;">${currentLoc ? currentLoc.name : 'Unknown Station'}</strong>
+                </div>
+                <button class="btn btn-outline" style="padding:0.5rem 1.5rem; font-size:0.75rem;" onclick="document.getElementById('gate-msg').classList.add('hidden')">OK, Understood</button>
             </div>`;
         msgArea.style.background = 'rgba(16, 185, 129, 0.1)';
         msgArea.style.color = 'var(--success)';
