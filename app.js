@@ -176,14 +176,18 @@ async function initSystemCloudSync() {
     if (localLedger) units = JSON.parse(localLedger);
     if (localAudit) globalAuditLog = JSON.parse(localAudit);
 
-    // 🔐 Restore Session & Apply UI Restrictions
+    // 🔐 Restore Session (Pre-fill logic only, no auto-redirect)
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
-        document.getElementById('screen-login').classList.add('hidden');
-        document.getElementById('main-layout').classList.remove('hidden');
-        applyRoleRestrictions();
-        showDashboard();
+        // document.getElementById('screen-login').classList.add('hidden');
+        // document.getElementById('main-layout').classList.remove('hidden');
+        // applyRoleRestrictions();
+        // showDashboard();
+
+        // Optional: Pre-fill Access ID
+        const accessInput = document.getElementById('login-access-id');
+        if (accessInput && !accessInput.value) accessInput.value = currentUser.accessId;
     }
 
     if (!cloudActive) {
