@@ -176,7 +176,7 @@ async function initSystemCloudSync() {
     if (localLedger) units = JSON.parse(localLedger);
     if (localAudit) globalAuditLog = JSON.parse(localAudit);
 
-    // 🔐 Restore Session (Auto-redirect enabled for workflow continuity)
+    /* 🔐 Restore Session Disabled: User prefers starting at Login for sync verification
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
@@ -185,10 +185,10 @@ async function initSystemCloudSync() {
         applyRoleRestrictions();
         showDashboard();
 
-        // Optional: Pre-fill Access ID
         const accessInput = document.getElementById('login-access-id');
         if (accessInput && !accessInput.value) accessInput.value = currentUser.accessId;
     }
+    */
 
     if (!cloudActive) {
         updateCloudStatus(false, 'LOCAL ONLY MODE');
@@ -1749,135 +1749,121 @@ function showTraceability() { render('traceability', 'FG Traceability', 'Heritag
 
 function showAnalytics() { render('analytics', 'Performance Analytics', 'Impact Study'); }
 
+/** 🔎 SMART LEDGER SEARCH (Serials, Stages, or Statuses) */
 function searchUnit() {
-    const sn = document.getElementById('search-serial').value.toUpperCase();
+    const query = document.getElementById('search-serial').value.toUpperCase().trim();
     const resultArea = document.getElementById('trace-result-area');
-    const unit = units[sn];
 
-    if (!unit) {
-        resultArea.innerHTML = `<div class="card glass text-center">Serial Number <strong>${sn}</strong> not found.</div>`;
+    // If no query, just re-run the radio filters
+    if (!query) {
+        runLiveFilter();
         return;
     }
 
-    resultArea.innerHTML = `
-        <div class="dashboard-grid animate-up">
-            <div class="card">
-                <h3 class="section-title-sm">Unit Identification</h3>
-                <div style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;">${unit.serial}</div>
-                <div class="badge ${unit.status === 'COMPLETED' ? 'badge-success' : 'badge-error'}">${unit.status}</div>
-                ${unit.status === 'SCRAP' && currentUser.role === 'admin' ? `
-                    <div style="margin-top: 1rem;">
-                        <button class="btn btn-outline w-full justify-center" style="border-color: var(--warning); color: var(--warning);" onclick="reworkScrappedUnit('${unit.serial}')">
-                            <i data-lucide="wrench" style="width:14px;"></i> Initiate Quality Rework
-                        </button>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="card">
-                <h3 class="section-title-sm">Component Traceability Audit</h3>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>Component</th><th>S/N</th><th>Paired At Stage</th><th>Paired Time</th></tr></thead>
-                        <tbody>
-                            ${Object.entries(unit.components).map(([k, v]) => `
-                                <tr>
-                                    <td style="font-weight:700;">${k}</td>
-                                    <td style="font-family:monospace;">${v.sn}</td>
-                                    <td><span class="badge badge-success">${v.stage}</span></td>
-                                    <td class="text-muted" style="font-size:0.75rem;">${v.time}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="card" style="grid-column: span 2;">
-                <h3 class="section-title-sm">Trace Logs</h3>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>Stage</th><th>Result</th><th>By</th><th>Timestamp</th></tr></thead>
-                        <tbody>
-                            ${unit.history.map(h => `<tr><td>${h.stage}</td><td><span class="badge ${h.status === 'PASS' ? 'badge-success' : 'badge-error'}">${h.status}</span></td><td>${h.operator}</td><td>${h.time}</td></tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    `;
-    lucide.createIcons();
-}
+    // ⚡ EXACT SERIAL MATCH: If found, show full Heritage Drill-down
+    const unit = units[query];
+    if (unit) {
+        renderHeritageView(unit);
+        return;
+    }
 
-function runLiveFilter() {
-    const filterType = document.querySelector('input[name="ledger-filter"]:checked').value;
-    const withComps = document.getElementById('filter-comp').checked;
-    const resultArea = document.getElementById('trace-result-area');
-
-    const filtered = Object.values(units).filter(u => {
-        if (withComps && Object.keys(u.components).length === 0) return false;
-
-        if (filterType === 'wip') return u.status === 'IN_PROGRESS' && !u.isRework;
-        if (filterType === 'passed') return u.status === 'COMPLETED';
-        if (filterType === 'scrap') return u.status === 'SCRAP';
-        if (filterType === 'rework') return u.isRework;
-        if (filterType === 'mrb') return u.status === 'MRB_REVIEW';
-
-        return true; // "all"
-    }).sort((a, b) => {
-        // High priority sorting (MRB units first)
-        if (a.status === 'MRB_REVIEW' && b.status !== 'MRB_REVIEW') return -1;
-        if (a.status !== 'MRB_REVIEW' && b.status === 'MRB_REVIEW') return 1;
-        return 0;
+    // 🔍 FUZZY TABLE FILTER: Search across Serials, Stages and Status
+    const allUnits = Object.values(units);
+    const filtered = allUnits.filter(u => {
+        const lastStage = u.history.length > 0 ? u.history[u.history.length - 1].stage.toUpperCase() : '';
+        const status = u.status.toUpperCase();
+        return u.serial.includes(query) || lastStage.includes(query) || status.includes(query);
     });
 
     if (filtered.length === 0) {
-        resultArea.innerHTML = `
-            <div class="card glass text-center" style="padding:5rem; border:1px dashed var(--border);">
-                <i data-lucide="inbox" style="width:48px; height:48px; margin:0 auto 1rem; opacity:0.2;"></i>
-                <h3 class="text-muted">No units found in the current selection.</h3>
-                <p class="text-muted" style="font-size:0.8rem;">Try scanning a unit at Stage 1 to start a new record.</p>
-            </div>`;
+        resultArea.innerHTML = `<div class="card glass text-center p-8"><i data-lucide="search-x" style="margin: 0 auto 1rem; opacity:0.2;"></i> No units or stages matching <strong>"${query}"</strong> found.</div>`;
         lucide.createIcons();
         return;
     }
 
+    renderLedgerTable(filtered, resultArea);
+}
+
+function renderHeritageView(unit) {
+    const resultArea = document.getElementById('trace-result-area');
     resultArea.innerHTML = `
-        <div class="card glass animate-up" style="padding:0; overflow:hidden;">
-            <div style="padding:1.5rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
-                <h3 class="section-title-sm" style="margin:0;">Active Production Stream (${filtered.length} Units)</h3>
-                <span class="text-muted" style="font-size:0.7rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;">Real-Time Ledger</span>
+        <div class="dashboard-grid animate-up">
+            <div class="card glass" style="border-left: 5px solid ${unit.status === 'COMPLETED' ? 'var(--success)' : 'var(--error)'}">
+                <h3 class="section-title-sm">Unit Pulse</h3>
+                <div style="font-size: 1.5rem; font-weight: 900; color: var(--text-bright);">${unit.serial}</div>
+                <div class="badge ${unit.status === 'COMPLETED' ? 'badge-success' : 'badge-error'}">${unit.status.replace('_', ' ')}</div>
+                <div class="text-muted" style="margin-top:0.5rem; font-size:0.7rem;">Currently at: <strong>${unit.history.length > 0 ? unit.history[unit.history.length - 1].stage : 'Initial Scan'}</strong></div>
+                <button class="btn btn-outline w-full" style="margin-top:1.5rem;" onclick="runLiveFilter(); document.getElementById('search-serial').value='';"><i data-lucide="arrow-left" style="width:14px;"></i> Return to Global Matrix</button>
             </div>
-            <div class="table-container" style="border:none; border-radius:0;">
+            <div class="card glass">
+                <h3 class="section-title-sm">Birth Log: Historical Trace</h3>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Stage</th><th>Status</th><th>Operator</th><th>Time</th></tr></thead>
+                        <tbody>
+                            ${unit.history.map(h => `<tr><td><strong>${h.stage}</strong></td><td><span class="badge ${h.status === 'PASS' ? 'badge-success' : 'badge-error'}">${h.status}</span></td><td>${h.operator}</td><td class="text-muted">${h.time}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    lucide.createIcons();
+}
+
+/** 📊 SHARED LEDGER TABLE RENDERER */
+function renderLedgerTable(filteredUnits, container) {
+    container.innerHTML = `
+        <div class="card glass animate-up" style="padding:0; overflow:hidden;">
+            <div class="table-container" style="border:none;">
                 <table>
                     <thead>
-                        <tr>
-                            <th>Serial / Lot</th>
-                            <th>Current/Last Path</th>
-                            <th>Latest Status</th>
-                            <th>Last Touchpoint</th>
-                            <th>Full Insight</th>
-                        </tr>
+                        <tr><th>SERIAL / ID</th><th>LAST KNOWN STAGE</th><th>LIVE STATUS</th><th>LAST EVENT</th><th>HERITAGE</th></tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(u => `
+                        ${filteredUnits.map(u => `
                             <tr>
-                                <td style="font-weight: 800; color: var(--text-bright);">${u.serial}</td>
-                                <td><span style="font-size:0.75rem;">${u.history.length > 0 ? u.history[u.history.length - 1].stage : '--'}</span></td>
+                                <td style="font-family:monospace; font-weight:800;">${u.serial}</td>
+                                <td><span style="font-size:0.75rem; font-weight:800;">${u.history.length > 0 ? u.history[u.history.length - 1].stage : '--'}</span></td>
                                 <td>
-                                    <span class="status-dot-pulse" style="width:6px; height:6px; background:${u.status === 'COMPLETED' ? 'var(--success)' : (u.status === 'MRB_REVIEW' ? 'var(--error)' : 'var(--warning)')}"></span>
                                     <span class="badge ${u.status === 'COMPLETED' ? 'badge-success' : (u.status === 'MRB_REVIEW' ? 'badge-error' : 'badge-warning')}">
                                         ${u.status.replace('_', ' ')}
                                     </span>
                                 </td>
-                                <td class="text-muted" style="font-size:0.7rem;">${u.history.length > 0 ? u.history[u.history.length - 1].time : '--'}</td>
-                                <td><button class="btn btn-outline" style="font-size:0.65rem; padding: 4px 8px;" onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">Trace Heritage</button></td>
+                                <td class="text-muted" style="font-size:0.65rem;">${u.history.length > 0 ? u.history[u.history.length - 1].time : '--'}</td>
+                                <td><button class="btn btn-outline" style="font-size:0.65rem; padding: 4px 10px;" onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">View Full Trace</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             </div>
-        </div>
-    `;
+        </div>`;
     lucide.createIcons();
+}
+
+function runLiveFilter() {
+    const filterType = document.querySelector('input[name="ledger-filter"]:checked').value;
+    const resultArea = document.getElementById('trace-result-area');
+    if (!resultArea) return;
+
+    const filtered = Object.values(units).filter(u => {
+        if (filterType === 'wip') return u.status === 'IN_PROGRESS' || u.status === 'IN_PROGRESS';
+        if (filterType === 'passed') return u.status === 'COMPLETED';
+        if (filterType === 'scrap') return u.status === 'SCRAP';
+        if (filterType === 'rework') return u.isRework;
+        if (filterType === 'mrb') return u.status === 'MRB_REVIEW';
+        return true; // "all"
+    }).sort((a, b) => {
+        if (a.status === 'MRB_REVIEW' && b.status !== 'MRB_REVIEW') return -1;
+        return 0;
+    });
+
+    if (filtered.length === 0) {
+        resultArea.innerHTML = `<div class="card glass text-center p-8"><i data-lucide="inbox" style="margin: 0 auto 1rem; opacity:0.1;"></i> No units in this category.</div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    renderLedgerTable(filtered, resultArea);
 }
 function exportWorkflow() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(manufacturingStages, null, 2));
