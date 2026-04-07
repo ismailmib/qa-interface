@@ -462,7 +462,7 @@ const templates = {
                 </div>
             </div>
 
-            <!-- 📅 30-DAY HISTORICAL INTELLIGENCE SECTION -->
+            <!-- 🏛️ 6-MONTH LEGACY PERFORMANCE ARCHIVE -->
             <div class="card" style="margin-top: 2rem; padding: 0; overflow: hidden;">
                 <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); border-bottom: 1px solid var(--border);">
                     <div class="flex justify-between items-center">
@@ -488,7 +488,7 @@ const templates = {
                         </div>
                     </div>
                     <div style="padding: 1.5rem 2rem; border-right: 1px solid var(--border);">
-                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #f59e0b; margin-bottom: 0.5rem;">PHASE 2 · TRANSITION (Day 15–21)</div>
+                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #f59e0b; margin-bottom: 0.5rem;">TRANSITION PHASE · SYSTEM SOFT-LAUNCH</div>
                         <div style="font-size: 2rem; font-weight: 900; color: #f59e0b;">90.1%</div>
                         <div class="text-muted" style="font-size: 0.75rem;">Avg Yield Rate</div>
                         <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem;">
@@ -499,7 +499,7 @@ const templates = {
                         </div>
                     </div>
                     <div style="padding: 1.5rem 2rem;">
-                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #10b981; margin-bottom: 0.5rem;">PHASE 3 · SYSTEM LIVE (Day 22–30)</div>
+                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: #10b981; margin-bottom: 0.5rem;">FULL SYSTEM LIVE · CLOUD INTEGRATED</div>
                         <div style="font-size: 2rem; font-weight: 900; color: #10b981;">97.8%</div>
                         <div class="text-muted" style="font-size: 0.75rem;">Avg Yield Rate</div>
                         <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem;">
@@ -514,7 +514,7 @@ const templates = {
                 <!-- 30-Day Bar Chart -->
                 <div style="padding: 2rem;">
                     <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                        <h4 style="font-weight: 800; font-size: 0.9rem;">Daily Yield Rate (30 Days)</h4>
+                        <h4 style="font-weight: 800; font-size: 0.9rem;">Conversion Efficiency Trend (6-Month Archive)</h4>
                         <div class="flex gap-4" style="font-size: 0.65rem;">
                             <span><span style="display:inline-block; width:10px; height:10px; background:#ef4444; border-radius:2px; margin-right:4px;"></span>Manual</span>
                             <span><span style="display:inline-block; width:10px; height:10px; background:#f59e0b; border-radius:2px; margin-right:4px;"></span>Transition</span>
@@ -560,13 +560,13 @@ const templates = {
                     <table>
                         <thead><tr><th>Date</th><th>Unit Serial</th><th>Stage</th><th>Inspector</th><th>Result</th><th>Defect Note</th><th>Escape Risk</th></tr></thead>
                         <tbody>
-                            <tr><td>Feb 8</td><td style="font-family:monospace; font-weight:800;">G-0201</td><td>PCB Assembly</td><td>Mark R.</td><td><span class="badge badge-error">FAIL</span></td><td>Solder Bridge on U1</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
-                            <tr><td>Feb 9</td><td style="font-family:monospace; font-weight:800;">G-0208</td><td>Display Mount</td><td>Sarah M.</td><td><span class="badge badge-success">PASS</span></td><td>—</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">LOW</span></td></tr>
-                            <tr><td>Feb 10</td><td style="font-family:monospace; font-weight:800;">G-0225</td><td>Final Casing</td><td>Mark R.</td><td><span class="badge badge-error">FAIL</span></td><td>Button misalignment</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
-                            <tr><td>Feb 11</td><td style="font-family:monospace; font-weight:800;">G-0231</td><td>PCB Assembly</td><td>Sarah M.</td><td><span class="badge badge-error">FAIL</span></td><td>Missing capacitor C14</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">CRITICAL</span></td></tr>
-                            <tr><td>Feb 12</td><td style="font-family:monospace; font-weight:800;">G-0244</td><td>Display Mount</td><td>Mark R.</td><td><span class="badge badge-success">PASS</span></td><td>—</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">LOW</span></td></tr>
-                            <tr><td>Feb 13</td><td style="font-family:monospace; font-weight:800;">G-0251</td><td>PCB Assembly</td><td>Sarah M.</td><td><span class="badge badge-error">FAIL</span></td><td>Solder Bridge on R3</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
-                            <tr style="background: rgba(16,185,129,0.03);"><td style="color:var(--success); font-weight:800;">Mar 1 ✅</td><td style="font-family:monospace; font-weight:800;">G-0601</td><td>PCB Assembly</td><td>System</td><td><span class="badge badge-success">PASS</span></td><td>Auto-verified (3 checkpoints)</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">ZERO</span></td></tr>
+                            <tr><td>Oct 12</td><td style="font-family:monospace; font-weight:800;">G-0201</td><td>PCB Assembly</td><td>Mark R.</td><td><span class="badge badge-error">FAIL</span></td><td>Solder Bridge on U1</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
+                            <tr><td>Nov 05</td><td style="font-family:monospace; font-weight:800;">G-0208</td><td>Display Mount</td><td>Sarah M.</td><td><span class="badge badge-success">PASS</span></td><td>—</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">LOW</span></td></tr>
+                            <tr><td>Dec 15</td><td style="font-family:monospace; font-weight:800;">G-0225</td><td>Final Casing</td><td>Mark R.</td><td><span class="badge badge-error">FAIL</span></td><td>Button misalignment</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
+                            <tr><td>Jan 22</td><td style="font-family:monospace; font-weight:800;">G-0231</td><td>PCB Assembly</td><td>Sarah M.</td><td><span class="badge badge-error">FAIL</span></td><td>Missing capacitor C14</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">CRITICAL</span></td></tr>
+                            <tr><td>Feb 14</td><td style="font-family:monospace; font-weight:800;">G-0244</td><td>Display Mount</td><td>Mark R.</td><td><span class="badge badge-success">PASS</span></td><td>—</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">LOW</span></td></tr>
+                            <tr><td>Mar 09</td><td style="font-family:monospace; font-weight:800;">G-0251</td><td>PCB Assembly</td><td>Sarah M.</td><td><span class="badge badge-error">FAIL</span></td><td>Solder Bridge on R3</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
+                            <tr style="background: rgba(16,185,129,0.03);"><td style="color:var(--success); font-weight:800;">Mar 28 ✅</td><td style="font-family:monospace; font-weight:800;">G-0601</td><td>PCB Assembly</td><td>System</td><td><span class="badge badge-success">PASS</span></td><td>Auto-verified (3 checkpoints)</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">ZERO</span></td></tr>
                         </tbody>
                     </table>
                 </div>
