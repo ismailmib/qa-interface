@@ -744,10 +744,11 @@ const templates = {
                     <div class="flex flex-wrap gap-x-8 gap-y-4 items-center" style="font-size: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border);">
                         <span class="text-muted" style="font-weight: 800;">QUICK FILTERS:</span>
                         <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="all" checked onchange="runLiveFilter()"> All Units</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="wip" onchange="runLiveFilter()"> Work In Progress (WIP)</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="passed" onchange="runLiveFilter()"> Fully Completed</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="scrap" onchange="runLiveFilter()"> Scrapped (Fail)</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="rework" onchange="runLiveFilter()"> Active Rework</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="mrb" onchange="runLiveFilter()"><span style="color:var(--error); font-weight:800;">Pending Review (MRB)</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="wip" onchange="runLiveFilter()"> WIP</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="passed" onchange="runLiveFilter()"> Passed</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="scrap" onchange="runLiveFilter()"> Scrap</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="rework" onchange="runLiveFilter()"> Rework</label>
                         <label class="flex items-center gap-2 cursor-pointer" style="margin-left: auto;"><input type="checkbox" id="filter-comp" onchange="runLiveFilter()"> With Components Only</label>
                     </div>
                 </div>
@@ -1122,6 +1123,11 @@ function validateUnitGate() {
         return;
     }
 
+    if (unit.status === 'MRB_REVIEW') {
+        showError(`PENDING REVIEW: Unit ${sn} is currently at the MRB Board for Admin decision.`, "shield-alert");
+        return;
+    }
+
     if (unit.status === 'SCRAP') {
         showError(`UNIT SCRAPPED: Serial ${sn} is flagged for dismantling.`, "trash-2");
         return;
@@ -1349,31 +1355,72 @@ function finalizeStage() {
 }
 
 function scrapUnitAction() {
-    if (confirm("🚨 SCRAP UNIT: Are you sure? This Serial Number will be permanently disabled.")) {
-        activeExecutionUnit.status = "SCRAP";
+    if (confirm("🚨 SEND TO REVIEW: Are you sure? This unit will be sent to the Admin Ledger for a final Rework/Scrap decision.")) {
+        activeExecutionUnit.status = "MRB_REVIEW";
+        activeExecutionUnit.scrapStageOrder = activeExecutionStage.order;
+        activeExecutionUnit.scrapStageName = activeExecutionStage.name;
         activeExecutionUnit.history.push({
             stage: activeExecutionStage.name,
-            status: "SCRAP",
+            status: "UNIT_REJECTED",
             operator: currentUser.name,
-            time: new Date().toLocaleString()
+            time: new Date().toLocaleString(),
+            note: "Sent to MRB Review"
         });
-
-        // Save the stage where it failed for future rework routing
-        activeExecutionUnit.scrapStageOrder = activeExecutionStage.order;
 
         // Update Stats
         currentUser.stats.scrapped++;
         persistUsers();
-        pushAudit("UNIT_SCRAP", `Unit ${activeExecutionUnit.serial} scrapped at ${activeExecutionStage.name}`);
+        pushAudit("UNIT_REJECTED", `Unit ${activeExecutionUnit.serial} rejected at ${activeExecutionStage.name}. Pending Admin Review.`);
 
         // Update Analytics Stats (mock increment)
         yieldData.scrapped[yieldData.scrapped.length - 1]++;
         persistYieldData();
         persistUnits();
 
-        showToast("Unit moved to Scrap Ledger.", "error");
+        showToast("Unit moved to MRB Review Ledger.", "warning");
         showDashboard();
     }
+}
+
+// 👑 MRB Management Functions (Admin Only)
+function authorizeRework(sn) {
+    const unit = units[sn];
+    if (!unit) return;
+
+    unit.status = "IN_PROGRESS";
+    unit.isRework = true;
+    unit.currentStageOrder = unit.scrapStageOrder || 1; // Return to same stage
+    unit.history.push({
+        stage: "ADMIN_MRB",
+        status: "REWORK_AUTHORIZED",
+        operator: currentUser.name,
+        time: new Date().toLocaleString(),
+        note: "Admin authorized unit to return to production."
+    });
+
+    persistUnits();
+    pushAudit("MRB_REWORK", `Unit ${sn} authorized for rework by ${currentUser.name}`);
+    showToast(`Unit ${sn} authorized for Rework. Operator can now scan it.`, "success");
+    runLiveFilter();
+}
+
+function confirmFinalScrap(sn) {
+    const unit = units[sn];
+    if (!unit) return;
+
+    unit.status = "SCRAP";
+    unit.history.push({
+        stage: "ADMIN_MRB",
+        status: "FINAL_SCRAP_CONFIRMED",
+        operator: currentUser.name,
+        time: new Date().toLocaleString(),
+        note: "Admin confirmed unit as final scrap/waste."
+    });
+
+    persistUnits();
+    pushAudit("MRB_FINAL_SCRAP", `Unit ${sn} permanently scrapped by ${currentUser.name}`);
+    showToast(`Unit ${sn} permanently removed from production.`, "error");
+    runLiveFilter();
 }
 
 // 👑 Admin Management
@@ -1597,8 +1644,14 @@ function runLiveFilter() {
         if (filterType === 'passed') return u.status === 'COMPLETED';
         if (filterType === 'scrap') return u.status === 'SCRAP';
         if (filterType === 'rework') return u.isRework;
+        if (filterType === 'mrb') return u.status === 'MRB_REVIEW';
 
         return true; // "all"
+    }).sort((a, b) => {
+        // High priority sorting (MRB units first)
+        if (a.status === 'MRB_REVIEW' && b.status !== 'MRB_REVIEW') return -1;
+        if (a.status !== 'MRB_REVIEW' && b.status === 'MRB_REVIEW') return 1;
+        return 0;
     });
 
     if (filtered.length === 0) {
@@ -1634,6 +1687,10 @@ function runLiveFilter() {
         let badgeClass = 'badge-success';
         let statusLabel = u.status;
         if (u.status === 'SCRAP') badgeClass = 'badge-error';
+        if (u.status === 'MRB_REVIEW') {
+            badgeClass = 'badge-error';
+            statusLabel = 'PENDING MRB';
+        }
         if (u.status === 'IN_PROGRESS') {
             badgeClass = 'badge-warning';
             statusLabel = 'WIP';
@@ -1648,8 +1705,24 @@ function runLiveFilter() {
         const currentStage = manufacturingStages.find(s => s.order === u.currentStageOrder);
         const stageName = currentStage ? currentStage.name : (lastLog ? lastLog.stage : 'Awaiting Stage 1');
 
+        // CUSTOM ACTIONS FOR MRB REVIEW
+        let actionBtn = `
+            <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.7rem; gap:4px;" 
+                    onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">
+                <i data-lucide="eye" style="width:12px"></i> Heritage Drill-down
+            </button>`;
+
+        if (u.status === 'MRB_REVIEW') {
+            actionBtn = `
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:var(--success); border:none;" onclick="authorizeRework('${u.serial}')">Authorize Rework</button>
+                    <button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:var(--error); border:none;" onclick="confirmFinalScrap('${u.serial}')">Final Scrap</button>
+                </div>
+            `;
+        }
+
         return `
-                            <tr>
+                            <tr class="${u.status === 'MRB_REVIEW' ? 'mrb-priority-row' : ''}">
                                 <td>
                                     <div style="font-weight:800; font-size:1rem; color:var(--primary); font-family:monospace;">${u.serial}</div>
                                     <div class="text-muted" style="font-size:0.6rem;">Lot: ASSEMBLY-A1</div>
@@ -1665,14 +1738,9 @@ function runLiveFilter() {
                                         <span>${u.history.length} Logs</span>
                                     </div>
                                 </td>
-                                <td>
-                                    <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.7rem; gap:4px;" 
-                                            onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">
-                                        <i data-lucide="eye" style="width:12px"></i> Heritage Drill-down
-                                    </button>
-                                </td>
+                                <td>${actionBtn}</td>
                             </tr>
-                        `;
+        `;
     }).join('')}
                     </tbody>
                 </table>
