@@ -372,26 +372,7 @@ const templates = {
             </div>
 
             <div class="dashboard-grid">
-                <div class="card" style="grid-column: span 2;">
-                    <h3 class="section-title-sm"><i data-lucide="file-digit" style="width:14px; vertical-align:middle;"></i> Data Transformation Proof (Evidence of Conversion)</h3>
-                    <div class="flex gap-6" style="margin-top: 1rem;">
-                        <div style="flex: 1; padding: 1.5rem; background: #fdf6e3; border: 1px solid #eee8d5; color: #657b83; border-radius: 8px; font-family: 'Courier New', monospace; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
-                            <div style="font-weight: 800; border-bottom: 1px solid #93a1a1; margin-bottom: 0.5rem; font-size: 0.7rem;">ORIGINAL MANUAL PAPER LOG (RAW)</div>
-                            <div style="font-size: 0.8rem; line-height: 1.6;">
-                                [[MANUAL_RAW]]
-                                <br><br>
-                                <span style="opacity: 0.5;">[Operator Scribble: "Hard to read SN"]</span>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; justify-content: center; color: var(--accent);">
-                             <i data-lucide="chevrons-right" style="width: 32px; height: 32px;"></i>
-                        </div>
-                        <div style="flex: 1; padding: 1.5rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: #fff; border-radius: 8px; font-family: 'Consolas', monospace;">
-                            <div style="font-weight: 800; border-bottom: 1px solid var(--primary); color: var(--primary); margin-bottom: 0.5rem; font-size: 0.7rem;">SYSTEM-STRUCTURED JSON (DIGITAL ERA)</div>
-                            <pre style="font-size: 0.75rem; color: var(--success);">[[CONVERTED_JSON]]</pre>
-                        </div>
-                    </div>
-                </div>
+
 
                 <div class="card">
                     <h3 class="section-title-sm">Operator Fatigue Index (Shift HR 1-8)</h3>
@@ -550,27 +531,7 @@ const templates = {
                 </div>
             </div>
 
-            <!-- Manual Log Sample -->
-            <div class="card" style="margin-top: 2rem;">
-                <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
-                    <h3 class="section-title-sm"><i data-lucide="file-text" style="width:14px; vertical-align:middle;"></i> Sample Manual Inspection Log (Pre-System)</h3>
-                    <span class="badge" style="background: rgba(239,68,68,0.1); color: var(--error);">Legacy Records</span>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>Date</th><th>Unit Serial</th><th>Stage</th><th>Inspector</th><th>Result</th><th>Defect Note</th><th>Escape Risk</th></tr></thead>
-                        <tbody>
-                            <tr><td>Oct 12</td><td style="font-family:monospace; font-weight:800;">G-0201</td><td>PCB Assembly</td><td>Mark R.</td><td><span class="badge badge-error">FAIL</span></td><td>Solder Bridge on U1</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
-                            <tr><td>Nov 05</td><td style="font-family:monospace; font-weight:800;">G-0208</td><td>Display Mount</td><td>Sarah M.</td><td><span class="badge badge-success">PASS</span></td><td>—</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">LOW</span></td></tr>
-                            <tr><td>Dec 15</td><td style="font-family:monospace; font-weight:800;">G-0225</td><td>Final Casing</td><td>Mark R.</td><td><span class="badge badge-error">FAIL</span></td><td>Button misalignment</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
-                            <tr><td>Jan 22</td><td style="font-family:monospace; font-weight:800;">G-0231</td><td>PCB Assembly</td><td>Sarah M.</td><td><span class="badge badge-error">FAIL</span></td><td>Missing capacitor C14</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">CRITICAL</span></td></tr>
-                            <tr><td>Feb 14</td><td style="font-family:monospace; font-weight:800;">G-0244</td><td>Display Mount</td><td>Mark R.</td><td><span class="badge badge-success">PASS</span></td><td>—</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">LOW</span></td></tr>
-                            <tr><td>Mar 09</td><td style="font-family:monospace; font-weight:800;">G-0251</td><td>PCB Assembly</td><td>Sarah M.</td><td><span class="badge badge-error">FAIL</span></td><td>Solder Bridge on R3</td><td><span class="badge" style="background:rgba(239,68,68,0.1);color:var(--error);">HIGH</span></td></tr>
-                            <tr style="background: rgba(16,185,129,0.03);"><td style="color:var(--success); font-weight:800;">Mar 28 ✅</td><td style="font-family:monospace; font-weight:800;">G-0601</td><td>PCB Assembly</td><td>System</td><td><span class="badge badge-success">PASS</span></td><td>Auto-verified (3 checkpoints)</td><td><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--success);">ZERO</span></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+
         </div>
     `,
     operatorDashboard: `
@@ -1549,7 +1510,7 @@ function searchUnit() {
     resultArea.innerHTML = `
         <div class="dashboard-grid animate-up">
             <div class="card">
-                <h3 class="section-title-sm">Heritage Header</h3>
+                <h3 class="section-title-sm">Unit Identification</h3>
                 <div style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;">${unit.serial}</div>
                 <div class="badge ${unit.status === 'COMPLETED' ? 'badge-success' : 'badge-error'}">${unit.status}</div>
                 ${unit.status === 'SCRAP' && currentUser.role === 'admin' ? `
@@ -1561,7 +1522,7 @@ function searchUnit() {
                 ` : ''}
             </div>
             <div class="card">
-                <h3 class="section-title-sm">Component Pairing Heritage</h3>
+                <h3 class="section-title-sm">Component Traceability Audit</h3>
                 <div class="table-container">
                     <table>
                         <thead><tr><th>Component</th><th>S/N</th><th>Paired At Stage</th><th>Paired Time</th></tr></thead>
