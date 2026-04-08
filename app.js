@@ -377,7 +377,7 @@ const templates = {
                     <div>
                         <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Shift Production Progress</div>
                         <div class="flex justify-between items-end" style="margin-bottom: 1rem;">
-                            <div style="font-size: 3rem; font-weight: 900; line-height: 1;"><span id="total-shift-pass">0</span><span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">/100 UNITS</span></div>
+                            <div style="font-size: 3rem; font-weight: 900; line-height: 1;"><span id="total-shift-pass">0</span><span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;"> / <span id="total-shift-processed">0</span> UNITS</span></div>
                             <div style="font-weight: 800; color: var(--primary);" id="shift-perc-label">0%</div>
                         </div>
                     </div>
@@ -1125,8 +1125,9 @@ async function generateMockShiftData() {
     persistAudit();
     showToast("✅ PRODUCTION STREAM COMPLETE: Shift totals synchronized.", "success");
     if (btn) {
+        const runningTotal = Object.keys(units).length;
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="play-circle" style="width:16px;"></i> Restart Stream Simulation';
+        btn.innerHTML = `<i data-lucide="play-circle" style="width:16px;"></i> Simulate Another 100 Units <span style="font-size:0.7rem; opacity:0.6;">(${runningTotal} total processed)</span>`;
         lucide.createIcons();
     }
 }
@@ -1138,8 +1139,8 @@ function updateAdminGauges() {
     const mrbCount = allUnits.filter(u => u.status === 'MRB_REVIEW').length;
     const totalProcessed = allUnits.length;
 
-    // Live FPY Calculation
-    const fpy = totalProcessed > 0 ? ((shiftPass / 100) * 100).toFixed(1) : "0"; // Using 100 as plan target
+    // ✅ FPY: passed / totalProcessed (cumulative, all batches)
+    const fpy = totalProcessed > 0 ? ((shiftPass / totalProcessed) * 100).toFixed(1) : "0";
     const fpyEl = document.getElementById('live-fpy-val');
     if (fpyEl) fpyEl.textContent = `${fpy}%`;
 
@@ -1150,16 +1151,19 @@ function updateAdminGauges() {
         circle.style.strokeDashoffset = offset;
     }
 
-    // Shift Progress
-    const progressVal = Math.min(shiftPass, 100);
+    // ✅ Shift Progress: X passed / Y total (cumulative across all simulation runs)
+    const passPercent = totalProcessed > 0 ? parseFloat(fpy) : 0;
     const passEl = document.getElementById('total-shift-pass');
     if (passEl) passEl.textContent = shiftPass;
 
+    const totalEl = document.getElementById('total-shift-processed');
+    if (totalEl) totalEl.textContent = totalProcessed;
+
     const percLabel = document.getElementById('shift-perc-label');
-    if (percLabel) percLabel.textContent = `${progressVal}% REACHED`;
+    if (percLabel) percLabel.textContent = `${passPercent.toFixed(1)}% PASS RATE`;
 
     const fill = document.getElementById('shift-progress-fill');
-    if (fill) fill.style.width = `${progressVal}%`;
+    if (fill) fill.style.width = `${Math.min(passPercent, 100)}%`;
 
     // MRB Inbox
     const mrbEl = document.getElementById('total-mrb-count');
