@@ -451,38 +451,38 @@ const templates = {
 
             <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem;">
                  <div class="card glass">
-                    <div class="stat-label">Projected Yield</div>
-                    <div class="stat-value" style="color:var(--success)">98.8%</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">TARGET: 98.5% ✅</div>
+                    <div class="stat-label">Live System FPY</div>
+                    <div class="stat-value" style="color:var(--success)" id="kpi-fpy-val">--</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;" id="kpi-fpy-sub">TARGET: 98.5%</div>
                  </div>
                  <div class="card glass">
-                    <div class="stat-label">Impact Gap</div>
-                    <div class="stat-value" style="color:var(--primary)">+11.7%</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% LEGACY</div>
+                    <div class="stat-label">Digital vs Legacy Gap</div>
+                    <div class="stat-value" style="color:var(--primary)" id="kpi-gap-val">--</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% LEGACY AVG</div>
                  </div>
                  <div class="card glass">
-                    <div class="stat-label">Ave. Processing Time</div>
-                    <div class="stat-value">2.4m</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--success); margin-top:0.5rem;">↑ 54% EFFICIENCY</div>
+                    <div class="stat-label">MRB Pending Queue</div>
+                    <div class="stat-value" style="color:var(--warning)" id="kpi-mrb-val">--</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;" id="kpi-mrb-sub">UNITS AWAITING DECISION</div>
                  </div>
                  <div class="card glass">
-                    <div class="stat-label">Material Loss</div>
-                    <div class="stat-value" style="color:var(--accent)">-82%</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">REDUCED SCRAP VOLUME</div>
+                    <div class="stat-label">Live Scrap Rate</div>
+                    <div class="stat-value" style="color:var(--accent)" id="kpi-scrap-val">--</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;" id="kpi-scrap-sub">LEGACY BENCHMARK: 12.9%</div>
                  </div>
             </div>
 
             <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
                 <div class="card glass">
-                    <h3 class="section-title-sm">Statistical Process Control (SPC) - 10-Unit Yield Window</h3>
+                    <h3 class="section-title-sm">Statistical Process Control (SPC) — Batch Yield Window</h3>
                     <div style="height:300px; margin-top:1.5rem; position: relative;" id="spc-container">
                         <canvas id="spc-yield-chart"></canvas>
                         <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
                     </div>
                     <div class="flex justify-between items-center" style="margin-top: 1rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">
-                        <span>UPPER CONTROL LIMIT: <span style="color:var(--error)">99.5%</span></span>
-                        <span>PROCESS MEAN: <span style="color:var(--primary)">96.2%</span></span>
-                        <span>LOWER CONTROL LIMIT: <span style="color:var(--warning)">92.0%</span></span>
+                        <span>UPPER CONTROL LIMIT: <span style="color:var(--error)" id="spc-ucl-label">--</span></span>
+                        <span>PROCESS MEAN (X̄): <span style="color:var(--primary)" id="spc-mean-label">--</span></span>
+                        <span>LOWER CONTROL LIMIT: <span style="color:var(--warning)" id="spc-lcl-label">--</span></span>
                     </div>
                 </div>
 
@@ -1202,17 +1202,58 @@ function updateStageHeatmap(containerId) {
 }
 
 function updateAnalyticsSummary() {
-    // Basic summary calculation
     const allUnits = Object.values(units);
-    const completed = allUnits.filter(u => u.status === 'COMPLETED').length;
-    const fpy = allUnits.length > 0 ? ((completed / allUnits.length) * 100).toFixed(1) : "98.8";
+    const total = allUnits.length;
+    const passed = allUnits.filter(u => u.status === 'COMPLETED').length;
+    const mrbCount = allUnits.filter(u => u.status === 'MRB_REVIEW').length;
+    const scrapCount = allUnits.filter(u => u.status === 'SCRAP').length;
 
-    // Optional: Dynamic Gap Analysis calculation
-    const gap = (parseFloat(fpy) - 87.1).toFixed(1);
+    // ── KPI 1: Live System FPY ─────────────────────────────────────────────
+    // Formula: (COMPLETED / total processed) × 100
+    // This is the true First-Pass Yield — units that cleared ALL stages first time.
+    const fpyNum = total > 0 ? (passed / total) * 100 : 0;
+    const fpyStr = total > 0 ? fpyNum.toFixed(1) + '%' : 'No Data';
+    const fpyEl = document.getElementById('kpi-fpy-val');
+    const fpySubEl = document.getElementById('kpi-fpy-sub');
+    if (fpyEl) fpyEl.textContent = fpyStr;
+    if (fpyEl) fpyEl.style.color = fpyNum >= 98.5 ? 'var(--success)' : fpyNum >= 92 ? 'var(--warning)' : 'var(--error)';
+    if (fpySubEl) fpySubEl.textContent = fpyNum >= 98.5 ? 'TARGET: 98.5% ✅ ACHIEVED' : `TARGET: 98.5% — ${(98.5 - fpyNum).toFixed(1)}% SHORT`;
 
-    // Update labels if they exist
-    const gapEl = document.querySelector('.analytics-stat-gap');
-    if (gapEl) gapEl.textContent = `+${gap}%`;
+    // ── KPI 2: Digital vs Legacy Gap ──────────────────────────────────────
+    // Formula: Live FPY% − 87.1% (historical legacy 6-month average)
+    // Tells management how much better the digital system performs vs manual era.
+    const legacyAvg = 87.1;
+    const gap = total > 0 ? (fpyNum - legacyAvg).toFixed(1) : null;
+    const gapEl = document.getElementById('kpi-gap-val');
+    if (gapEl) gapEl.textContent = gap !== null ? (gap >= 0 ? `+${gap}%` : `${gap}%`) : 'No Data';
+    if (gapEl) gapEl.style.color = gap > 0 ? 'var(--success)' : 'var(--error)';
+
+    // ── KPI 3: MRB Pending Queue ──────────────────────────────────────────
+    // Formula: Count of units in MRB_REVIEW status — units rejected at a stage
+    //          but not yet given a final REWORK or SCRAP decision.
+    // Management action: if this number is high, MRB decisions are backlogged.
+    const mrbEl = document.getElementById('kpi-mrb-val');
+    const mrbSubEl = document.getElementById('kpi-mrb-sub');
+    if (mrbEl) mrbEl.textContent = total > 0 ? `${mrbCount} units` : 'No Data';
+    if (mrbEl) mrbEl.style.color = mrbCount === 0 ? 'var(--success)' : mrbCount < 5 ? 'var(--warning)' : 'var(--error)';
+    if (mrbSubEl) mrbSubEl.textContent = mrbCount === 0 ? '✅ QUEUE CLEAR' : `${mrbCount} AWAITING DECISION`;
+
+    // ── KPI 4: Live Scrap Rate ────────────────────────────────────────────
+    // Formula: (MRB_REVIEW + final SCRAP) / total × 100
+    // Compared against 12.9% — the average legacy scrap rate over 6 months.
+    // A lower % = fewer units wasted = money saved.
+    const legacyScrapRate = 12.9;
+    const liveScrapRate = total > 0 ? ((mrbCount + scrapCount) / total) * 100 : null;
+    const scrapEl = document.getElementById('kpi-scrap-val');
+    const scrapSubEl = document.getElementById('kpi-scrap-sub');
+    if (scrapEl) scrapEl.textContent = liveScrapRate !== null ? liveScrapRate.toFixed(1) + '%' : 'No Data';
+    if (scrapEl) scrapEl.style.color = liveScrapRate !== null && liveScrapRate < legacyScrapRate ? 'var(--success)' : 'var(--error)';
+    if (scrapSubEl) {
+        const improvement = liveScrapRate !== null ? (legacyScrapRate - liveScrapRate).toFixed(1) : null;
+        scrapSubEl.textContent = improvement !== null
+            ? (improvement >= 0 ? `↓ ${improvement}% BETTER THAN LEGACY` : `↑ ${Math.abs(improvement)}% WORSE THAN LEGACY`)
+            : 'LEGACY BENCHMARK: 12.9%';
+    }
 }
 
 // 👩‍🏭 Operator Workflow
@@ -2286,29 +2327,91 @@ function renderExecutiveCharts() {
             // Hide loader placeholders
             document.querySelectorAll('.chart-loader').forEach(l => l.style.display = 'none');
 
-            // 1. SPC Chart
+            // 1. SPC Chart — Shewhart Control Chart (X̄ ± 3σ)
+            // ─────────────────────────────────────────────────────────────────────
+            // HOW IT WORKS:
+            //   • We slice ALL processed units into batches of 10.
+            //   • For each batch: Batch Yield % = (passed in batch / 10) × 100
+            //   • Mean (X̄) = average of all batch yields
+            //   • Std Dev (σ) = sqrt(Σ(yi - X̄)² / n) — measures how spread out yields are
+            //   • UCL = X̄ + 3σ  (above this = unusually good, investigate for measurement error)
+            //   • LCL = X̄ − 3σ  (below this = process OUT OF CONTROL — stop line!)
+            //   • Any point BELOW LCL on the chart is a RED DOT — critical alert.
+            // If fewer than 2 batches exist, we show a realistic demo dataset.
+            // ─────────────────────────────────────────────────────────────────────
             const spcCanvas = document.getElementById('spc-yield-chart');
             if (spcCanvas) {
                 destroyIfExists('spc-yield-chart');
+
+                const BATCH_SIZE = 10;
+                const allUnitsArr = Object.values(units);
+                const rawBatches = [];
+                for (let i = 0; i < allUnitsArr.length; i += BATCH_SIZE) {
+                    const slice = allUnitsArr.slice(i, i + BATCH_SIZE);
+                    const p = slice.filter(u => u.status === 'COMPLETED').length;
+                    rawBatches.push(parseFloat(((p / slice.length) * 100).toFixed(1)));
+                }
+
+                // Fall back to demo data if < 2 real batches
+                const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2];
+                const batchYields = rawBatches.length >= 2 ? rawBatches.slice(-12) : DEMO;
+                const labels = batchYields.map((_, i) => rawBatches.length >= 2
+                    ? `Batch ${i + 1}`
+                    : `${10 + i * 15}:00`.replace(/^(\d)/, '0$1').slice(0, 5));
+
+                // ── Shewhart Calculations ──
+                const n = batchYields.length;
+                const mean = batchYields.reduce((a, b) => a + b, 0) / n;
+                const variance = batchYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
+                const sigma = Math.sqrt(variance);
+                const ucl = Math.min(parseFloat((mean + 3 * sigma).toFixed(1)), 100);
+                const lcl = Math.max(parseFloat((mean - 3 * sigma).toFixed(1)), 70);
+
+                // Update footer labels
+                const uclEl = document.getElementById('spc-ucl-label');
+                const meanEl = document.getElementById('spc-mean-label');
+                const lclEl = document.getElementById('spc-lcl-label');
+                if (uclEl) uclEl.textContent = ucl.toFixed(1) + '%';
+                if (meanEl) meanEl.textContent = mean.toFixed(1) + '%';
+                if (lclEl) lclEl.textContent = lcl.toFixed(1) + '%';
+
+                // Red dots for out-of-control points (below LCL)
+                const pointColors = batchYields.map(y => y < lcl ? '#ef4444' : '#10b981');
+                const pointRadii = batchYields.map(y => y < lcl ? 8 : 5);
+
                 new Chart(spcCanvas, {
                     type: 'line',
                     data: {
-                        labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
+                        labels,
                         datasets: [{
-                            label: 'Live Yield %',
-                            data: [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2],
+                            label: 'Batch Yield %',
+                            data: batchYields,
                             borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 5,
-                            pointBackgroundColor: '#10b981',
+                            pointRadius: pointRadii,
+                            pointBackgroundColor: pointColors,
                             pointBorderColor: '#fff',
                             pointBorderWidth: 2
                         }, {
-                            label: 'LCL — Warning Threshold (92%)',
-                            data: Array(10).fill(92.0),
-                            borderColor: 'rgba(239,68,68,0.6)',
+                            label: `UCL (${ucl.toFixed(1)}%)`,
+                            data: Array(n).fill(ucl),
+                            borderColor: 'rgba(139,92,246,0.5)',
+                            borderDash: [4, 4],
+                            pointStyle: false,
+                            fill: false
+                        }, {
+                            label: `Mean X̄ (${mean.toFixed(1)}%)`,
+                            data: Array(n).fill(parseFloat(mean.toFixed(1))),
+                            borderColor: 'rgba(59,130,246,0.7)',
+                            borderDash: [8, 4],
+                            pointStyle: false,
+                            fill: false
+                        }, {
+                            label: `LCL (${lcl.toFixed(1)}%) — Below = OUT OF CONTROL`,
+                            data: Array(n).fill(lcl),
+                            borderColor: 'rgba(239,68,68,0.7)',
                             borderDash: [6, 4],
                             pointStyle: false,
                             fill: false
@@ -2319,16 +2422,35 @@ function renderExecutiveCharts() {
                         maintainAspectRatio: false,
                         animation: { duration: 700 },
                         plugins: {
-                            legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } } },
-                            tooltip: { mode: 'index', intersect: false }
+                            legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, boxWidth: 20 } },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    afterLabel(ctx) {
+                                        if (ctx.datasetIndex === 0) {
+                                            const y = ctx.parsed.y;
+                                            if (y < lcl) return '⚠️ OUT OF CONTROL — Below LCL';
+                                            if (y > ucl) return '⚠️ ABOVE UCL — Check measurement';
+                                            return '✅ In Control';
+                                        }
+                                        return null;
+                                    }
+                                }
+                            }
                         },
                         scales: {
-                            y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' } },
+                            y: {
+                                min: Math.max(70, lcl - 5),
+                                max: 100,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' }
+                            },
                             x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
                         }
                     }
                 });
-                console.log('✅ SPC Chart rendered.');
+                console.log(`✅ SPC Chart: ${n} batches | X̄=${mean.toFixed(1)}% | σ=${sigma.toFixed(2)} | UCL=${ucl}% | LCL=${lcl}%`);
             } else {
                 console.warn('⚠️ #spc-yield-chart canvas not found in DOM.');
             }
