@@ -929,24 +929,43 @@ function toggleExpandCard(cardId, containerId) {
     const card = document.getElementById(cardId);
     if (!card) return;
 
-    if (card.classList.contains('card-expanded')) {
-        // MINIMIZE
+    const isCollapsing = card.classList.contains('card-expanded');
+
+    if (isCollapsing) {
+        // 📉 MINIMIZE
         card.classList.remove('card-expanded');
         const overlay = document.querySelector('.card-expand-overlay');
         if (overlay) overlay.remove();
-        if (containerId) document.getElementById(containerId).style.height = '300px';
+
+        // Reset card to original natural flow (remove any inline overrides)
+        card.style.position = '';
+        card.style.top = '';
+        card.style.left = '';
+        card.style.transform = '';
+        card.style.width = '';
+        card.style.height = '';
+        card.style.zIndex = '';
+
+        if (containerId) {
+            const container = document.getElementById(containerId);
+            if (container) container.style.height = '300px';
+        }
     } else {
-        // MAXIMIZE
+        // 📈 MAXIMIZE
         const overlay = document.createElement('div');
         overlay.className = 'card-expand-overlay';
-        overlay.onclick = () => toggleExpandCard(cardId, containerId); // Close on overlay click
+        overlay.onclick = () => toggleExpandCard(cardId, containerId);
         document.body.appendChild(overlay);
 
         card.classList.add('card-expanded');
-        if (containerId) document.getElementById(containerId).style.height = '70vh';
+        if (containerId) {
+            const container = document.getElementById(containerId);
+            if (container) container.style.height = '70vh';
+        }
     }
 
-    // Notify charts to resize and re-render with higher-def settings
+    // 🧱 Re-render charts with correct high-def or standard settings
+    // Wait 400ms for the CSS transition (0.3s) to fully finish layout shift
     setTimeout(() => {
         if (templateCache.active === 'analytics' || templateCache.active === 'executiveAnalytics') {
             renderExecutiveCharts();
@@ -954,7 +973,7 @@ function toggleExpandCard(cardId, containerId) {
         if (window.Chart) {
             Object.values(Chart.instances).forEach(chart => chart.resize());
         }
-    }, 100);
+    }, 400);
 }
 
 function render(templateKey, title, breadcrumb) {
