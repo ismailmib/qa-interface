@@ -218,12 +218,21 @@ async function initSystemCloudSync() {
             });
         }
 
-        // ⚡ ISMAIL MASTER INJECTION: Ensure management access is NEVER lost
-        const ismailExists = usersData.find(u => u.accessId === 'ismail');
-        if (!ismailExists) {
-            usersData.push({ id: 'u_master', name: 'Ismail', role: 'admin', accessId: 'ismail', pass: '123', stats: { passed: 0, scrapped: 0 } });
-            persistUsers(); // Push to cloud immediately
-        }
+        // ⚡ MASTER MANAGEMENT INJECTION: Ensure executive access is NEVER lost
+        const masters = [
+            { id: 'u_master_ismail', name: 'Ismail', role: 'admin', accessId: 'ismail', pass: '123', stats: { passed: 0, scrapped: 0 } },
+            { id: 'u_master_nitish', name: 'Nitish', role: 'admin', accessId: 'nitish', pass: '123', stats: { passed: 0, scrapped: 0 } }
+        ];
+
+        let updated = false;
+        masters.forEach(m => {
+            if (!usersData.find(u => u.accessId === m.accessId)) {
+                usersData.push(m);
+                updated = true;
+            }
+        });
+
+        if (updated) persistUsers(); // Push to cloud if new masters added
 
         updateCloudStatus(true, 'CLOUD SYNC VERIFIED');
         showToast("✅ Real-Time Firebase Subscription Active", "success", 2000);
@@ -713,15 +722,26 @@ function handleLogin() {
     const pass = document.getElementById('login-passcode').value;
     const roleReq = document.getElementById('login-role').value;
 
-    // 🏆 MASTER LOGIN BYPASS (Management Resilience)
-    if (accessId.toLowerCase() === 'ismail' && pass === '123') {
-        currentUser = { id: 'u_master', name: 'Ismail', role: 'admin', accessId: 'ismail', stats: { passed: 0, scrapped: 0 } };
+    // 🏆 MASTER LOGIN BYPASS (Management Resilience: Ismail & Nitish)
+    const normalizedID = accessId.toLowerCase().trim();
+    const normalizedPass = pass.trim();
+
+    if ((normalizedID === 'ismail' || normalizedID === 'nitish') && normalizedPass === '123') {
+        console.log("💎 MASTER KEY ENGAGE: Access Granted for Management Role.");
+        currentUser = {
+            id: normalizedID === 'ismail' ? 'u_master_ismail' : 'u_master_nitish',
+            name: normalizedID === 'ismail' ? 'Ismail' : 'Nitish',
+            role: 'admin',
+            accessId: normalizedID,
+            stats: { passed: 0, scrapped: 0 }
+        };
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
         document.getElementById('screen-login').classList.add('hidden');
         document.getElementById('main-layout').classList.remove('hidden');
         applyRoleRestrictions();
         showDashboard();
+        showToast(`Welcome back, ${currentUser.name}! Executive access enabled.`, "success");
         return;
     }
 
