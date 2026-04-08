@@ -878,7 +878,29 @@ function showDashboard() {
     }
 }
 
+function setActiveNav(templateKey) {
+    // Map template keys to their sidebar nav link IDs
+    const navMap = {
+        adminDashboard: 'nav-dashboard',
+        stageManagement: 'nav-management',
+        createStage: 'nav-management',
+        analytics: 'nav-analytics',
+        executiveAnalytics: 'nav-analytics',
+        traceability: 'nav-traceability',
+        userManagement: 'nav-users',
+    };
+    // Remove active from all nav links
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    // Add active to the matching one
+    const targetId = navMap[templateKey];
+    if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) el.classList.add('active');
+    }
+}
+
 function render(templateKey, title, breadcrumb) {
+    setActiveNav(templateKey);
     stopWebcam(); // 🔐 Global: Ensure camera is killed when changing views
 
     document.getElementById('view-title').textContent = title;
