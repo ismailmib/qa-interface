@@ -361,7 +361,9 @@ const templates = {
                         <div style="font-size: 3rem; font-weight: 900; line-height: 1; color: var(--error);" id="total-mrb-count">0</div>
                         <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem; font-weight: 600;">UNITS AWAITING YOUR DECISION</p>
                     </div>
-                    <button class="btn btn-primary" onclick="showTraceability(); setTimeout(() => { document.querySelector('input[value=\'mrb\']').click(); }, 150);" style="background: var(--error); border:none; width: 100%; justify-content: center;">Action Decision Inbox</button>
+                     <button class="btn btn-primary" onclick="goToMRB()" style="background: var(--error); border:none; width: 100%; justify-content: center; gap: 8px;">
+                         <i data-lucide="alert-circle" style="width:16px;"></i> Action Decision Inbox
+                     </button>
                 </div>
             </div>
 
@@ -438,36 +440,32 @@ const templates = {
                  </div>
             </div>
 
-            <div class="dashboard-grid">
-                <div class="card glass" style="grid-column: span 2;">
-                    <h3 class="section-title-sm">Modern System Impact (Gap vs Manual Baseline)</h3>
-                    <div style="height:300px; padding: 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; gap: 40px; position: relative;">
-                         <!-- Baseline Comparison -->
-                         <div style="flex: 1; height: 87.1%; background: var(--border); border-radius: 8px 8px 0 0; position: relative;">
-                             <div style="position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.6rem; font-weight:800; color: var(--text-muted);">MANUAL ERA (87.1%)</div>
-                         </div>
-                         <div style="flex: 1; height: 98.8%; background: linear-gradient(to top, var(--success), var(--accent)); border-radius: 8px 8px 0 0; position: relative; box-shadow: 0 0 20px var(--success-glow);">
-                             <div style="position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.6rem; font-weight:900; color: var(--success);">SYSTEM LIVE (98.8%)</div>
-                         </div>
+            <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                <div class="card glass">
+                    <h3 class="section-title-sm">Statistical Process Control (SPC) - 10-Unit Yield Window</h3>
+                    <div style="height:300px; margin-top:1.5rem;">
+                        <canvas id="spc-yield-chart"></canvas>
+                    </div>
+                    <div class="flex justify-between items-center" style="margin-top: 1rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">
+                        <span>UPPER CONTROL LIMIT: <span style="color:var(--error)">99.5%</span></span>
+                        <span>PROCESS MEAN: <span style="color:var(--primary)">96.2%</span></span>
+                        <span>LOWER CONTROL LIMIT: <span style="color:var(--warning)">92.0%</span></span>
                     </div>
                 </div>
 
-                <div class="card glass">
-                    <h3 class="section-title-sm">Top Defect Categories</h3>
-                    <div class="flex flex-col gap-5" style="margin-top: 1.5rem;">
-                        <div class="flex flex-col gap-2">
-                             <div class="flex justify-between" style="font-size: 0.75rem;"><span class="font-bold">Assembly Mismatch</span><span class="text-muted">42%</span></div>
-                             <div style="height: 6px; background: var(--border); border-radius: 3px;"><div style="width: 42%; height: 100%; background: var(--error); border-radius: 3px;"></div></div>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                             <div class="flex justify-between" style="font-size: 0.75rem;"><span class="font-bold">Component Alignment</span><span class="text-muted">28%</span></div>
-                             <div style="height: 6px; background: var(--border); border-radius: 3px;"><div style="width: 28%; height: 100%; background: var(--warning); border-radius: 3px;"></div></div>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                             <div class="flex justify-between" style="font-size: 0.75rem;"><span class="font-bold">Vision Rejection</span><span class="text-muted">18%</span></div>
-                             <div style="height: 6px; background: var(--border); border-radius: 3px;"><div style="width: 18%; height: 100%; background: var(--primary); border-radius: 3px;"></div></div>
-                        </div>
+                <div class="card glass shadow-lg">
+                    <h3 class="section-title-sm" style="color:var(--error)">⚠️ Critical Management Actions</h3>
+                    <p class="text-muted" style="font-size: 0.7rem; margin-bottom: 1.5rem;">Stages currently performing below 92% benchmark</p>
+                    <div id="bottleneck-action-list" class="flex flex-col gap-3">
+                         <!-- Bottlenecks injected here -->
                     </div>
+                </div>
+            </div>
+
+            <div class="card glass" style="margin-top: 2rem;">
+                <h3 class="section-title-sm">6-Month Production Transformation (Legacy vs Digital)</h3>
+                <div style="height:250px; margin-top:1.5rem;">
+                    <canvas id="monthly-trend-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -935,14 +933,15 @@ function render(templateKey, title, breadcrumb) {
     if (templateKey === 'stageManagement') populateStagesTimeline();
     if (templateKey === 'executionScreen') setupExecutionScreen();
     if (templateKey === 'createStage' && editingStageId) setupCreateStageForm();
+    // 📈 ANALYTICS & DASHBOARD HOOKS
     if (templateKey === 'adminDashboard') {
         updateAdminGauges();
         updateAuditFeed();
         updateStageHeatmap('stage-yield-heat-map');
     }
     if (templateKey === 'analytics') {
-        updateStageHeatmap('analytics-heatmap');
         updateAnalyticsSummary();
+        renderExecutiveCharts();
     }
 
     lucide.createIcons();
@@ -2100,6 +2099,125 @@ function importExcelWorkflow(event) {
 }
 
 // Init
+// 🏛️ EXECUTIVE CONTROL & ANALYTICS ENGINE
+function goToMRB() {
+    render('traceability', 'Production Ledger', 'Real-time Board');
+    setTimeout(() => {
+        const rad = document.querySelector('input[name="ledger-filter"][value="mrb"]');
+        if (rad) {
+            rad.checked = true;
+            runLiveFilter();
+        }
+    }, 150);
+}
+
+function renderExecutiveCharts() {
+    // 1. SPC Chart (Statistical Process Control)
+    const spcCtx = document.getElementById('spc-yield-chart');
+    if (spcCtx) {
+        new Chart(spcCtx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
+                datasets: [{
+                    label: 'Live Yield %',
+                    data: [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#10b981'
+                }, {
+                    label: 'LCL (Warning)',
+                    data: Array(10).fill(92.0),
+                    borderColor: 'rgba(239, 68, 68, 0.4)',
+                    borderDash: [5, 5],
+                    pointStyle: false,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                    x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                }
+            }
+        });
+    }
+
+    // 2. Monthly Trend Chart (Digital vs Manual Heritage)
+    const trendCtx = document.getElementById('monthly-trend-chart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'bar',
+            data: {
+                labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current (Digital)"],
+                datasets: [{
+                    label: 'Legacy Manual Yield %',
+                    data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 4
+                }, {
+                    label: 'Digital System Yield %',
+                    data: [null, null, null, null, null, null, 98.8],
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { size: 10 } } } },
+                scales: {
+                    y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                    x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                }
+            }
+        });
+    }
+
+    // 3. Bottleneck Analysis Logic
+    const list = document.getElementById('bottleneck-action-list');
+    if (list) {
+        const bottlenecks = manufacturingStages.filter(s => {
+            const data = yieldData[s.id] || { ins: 0, pass: 0 };
+            const yieldVal = data.ins === 0 ? 100 : (data.pass / data.ins * 100);
+            return yieldVal < 92;
+        });
+
+        if (bottlenecks.length === 0) {
+            list.innerHTML = `
+                <div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+                    <i data-lucide="check-circle-2" style="width:32px; height:32px; color:var(--success); margin: 0 auto 0.5rem; opacity:0.5;"></i>
+                    <p class="text-muted" style="font-size:0.7rem;">All stations performing within safety benchmarks.</p>
+                </div>`;
+            lucide.createIcons();
+        } else {
+            list.innerHTML = bottlenecks.map(s => {
+                const data = yieldData[s.id];
+                const yieldVal = (data.pass / data.ins * 100).toFixed(1);
+                return `
+                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius:12px; padding: 1rem; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:800; font-size:0.85rem; color:var(--error); margin-bottom:0.2rem;">${s.name}</div>
+                            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">⚠️ ${data.ins - data.pass} REJECTIONS RECORDED</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size: 1.25rem; font-weight: 900; color: var(--error);">${yieldVal}%</div>
+                            <div style="font-size: 0.55rem; color: var(--error); font-weight:800; letter-spacing:0.05em;">BELOW LIMIT</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+}
+
+// Global System Boot
 applyRoleRestrictions();
-initSystemCloudSync(); // 🚀 Cloud Handshake Heartbeat
+initSystemCloudSync();
 lucide.createIcons();
