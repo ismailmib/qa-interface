@@ -137,6 +137,7 @@ let simPaused = false;  // true = loop is frozen mid-run
 let simStopped = false;  // true = loop should abort after current unit
 let simQueueNext = false; // true = queue another batch after current completes
 let simBatchSize = 100;  // default batch size
+let currentView = '';   // 📍 Tracks the currently active page/template
 
 async function persistUsers() {
     localStorage.setItem('usersData', JSON.stringify(usersData));
@@ -1261,6 +1262,7 @@ function renderSPCModalChart() {
 }
 
 function render(templateKey, title, breadcrumb) {
+    currentView = templateKey; // 📍 Always track active view for live sync
     setActiveNav(templateKey);
     stopWebcam(); // 🔐 Global: Ensure camera is killed when changing views
 
@@ -1697,10 +1699,15 @@ async function generateMockShiftData(batchSz) {
             op: 'Simulation Engine'
         });
 
-        // 🔄 Live UI updates
+        // 🔄 Live UI updates — Control Panel
         updateAdminGauges();
         updateAuditFeed();
         updateStageHeatmap('stage-yield-heat-map');
+
+        // 📊 Live Analytics sync — if user is on analytics page, update KPIs in real-time
+        if (currentView === 'analytics' || currentView === 'executiveAnalytics') {
+            updateAnalyticsSummary();
+        }
 
         await new Promise(r => setTimeout(r, 350));
 
@@ -1719,6 +1726,15 @@ async function generateMockShiftData(batchSz) {
     }
 
     setSimControlState('done');
+
+    // 📊 Refresh Analytics Charts once after full batch completes
+    // (Heavy chart re-render: done once per batch, not per unit)
+    if (currentView === 'analytics' || currentView === 'executiveAnalytics') {
+        setTimeout(() => {
+            updateAnalyticsSummary();
+            renderExecutiveCharts();
+        }, 300);
+    }
 
     // Auto-start next batch if queued
     if (simQueueNext && !simStopped) {
