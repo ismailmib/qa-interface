@@ -452,8 +452,9 @@ const templates = {
             <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
                 <div class="card glass">
                     <h3 class="section-title-sm">Statistical Process Control (SPC) - 10-Unit Yield Window</h3>
-                    <div style="height:300px; margin-top:1.5rem;">
+                    <div style="height:300px; margin-top:1.5rem; position: relative;" id="spc-container">
                         <canvas id="spc-yield-chart"></canvas>
+                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
                     </div>
                     <div class="flex justify-between items-center" style="margin-top: 1rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">
                         <span>UPPER CONTROL LIMIT: <span style="color:var(--error)">99.5%</span></span>
@@ -473,8 +474,9 @@ const templates = {
 
             <div class="card glass" style="margin-top: 2rem;">
                 <h3 class="section-title-sm">6-Month Production Transformation (Legacy vs Digital)</h3>
-                <div style="height:250px; margin-top:1.5rem;">
+                <div style="height:250px; margin-top:1.5rem; position: relative;" id="trend-container">
                     <canvas id="monthly-trend-chart"></canvas>
+                    <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
                 </div>
             </div>
         </div>
@@ -2172,81 +2174,92 @@ function goToMRB() {
 }
 
 function renderExecutiveCharts() {
-    // ⚡ FIX: Added slight delay to ensure DOM is ready and Chart.js is registered
+    console.log("📊 Chart System: Booting Executive Visuals...");
+
+    // ⚡ Resilience Delay: Ensure canvas is in DOM
     setTimeout(() => {
-        if (typeof Chart === 'undefined') {
-            console.error("Chart.js not loaded yet. Retrying...");
-            return;
-        }
+        try {
+            if (typeof Chart === 'undefined') {
+                showToast("Chart Engine missing. Refreshing library connection...", "warning");
+                return;
+            }
 
-        // 1. SPC Chart (Statistical Process Control)
-        const spcCtx = document.getElementById('spc-yield-chart');
-        if (spcCtx) {
-            new Chart(spcCtx, {
-                type: 'line',
-                data: {
-                    labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
-                    datasets: [{
-                        label: 'Live Yield %',
-                        data: [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2],
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#10b981'
-                    }, {
-                        label: 'LCL (Warning)',
-                        data: Array(10).fill(92.0),
-                        borderColor: 'rgba(239, 68, 68, 0.4)',
-                        borderDash: [5, 5],
-                        pointStyle: false,
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
-                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
-                    }
-                }
-            });
-        }
+            // Remove loaders
+            document.querySelectorAll('.chart-loader').forEach(l => l.style.display = 'none');
 
-        // 2. Monthly Trend Chart
-        const trendCtx = document.getElementById('monthly-trend-chart');
-        if (trendCtx) {
-            new Chart(trendCtx, {
-                type: 'bar',
-                data: {
-                    labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current (Digital)"],
-                    datasets: [{
-                        label: 'Legacy Manual Yield %',
-                        data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: 4
-                    }, {
-                        label: 'Digital System Yield %',
-                        data: [null, null, null, null, null, null, 98.8],
-                        backgroundColor: '#8b5cf6',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { size: 10 } } } },
-                    scales: {
-                        y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
-                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+            // 1. SPC Chart
+            const spcCtx = document.getElementById('spc-yield-chart');
+            if (spcCtx) {
+                new Chart(spcCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
+                        datasets: [{
+                            label: 'Live Yield %',
+                            data: [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#10b981'
+                        }, {
+                            label: 'LCL (Warning)',
+                            data: Array(10).fill(92.0),
+                            borderColor: 'rgba(239, 68, 68, 0.4)',
+                            borderDash: [5, 5],
+                            pointStyle: false,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                        }
                     }
-                }
-            });
+                });
+                console.log("✅ SPC Chart Rendered.");
+            }
+
+            // 2. Monthly Trend Chart
+            const trendCtx = document.getElementById('monthly-trend-chart');
+            if (trendCtx) {
+                new Chart(trendCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current (Digital)"],
+                        datasets: [{
+                            label: 'Legacy Manual Yield %',
+                            data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: 4
+                        }, {
+                            label: 'Digital System Yield %',
+                            data: [null, null, null, null, null, null, 98.8],
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { size: 10 } } } },
+                        scales: {
+                            y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                        }
+                    }
+                });
+                console.log("✅ Trend Chart Rendered.");
+            }
+        } catch (err) {
+            console.error("❌ Chart Execution Error:", err);
         }
-    }, 100);
+    }, 150);
 
     // 3. Bottleneck Analysis Logic (Immediate)
     const list = document.getElementById('bottleneck-action-list');
