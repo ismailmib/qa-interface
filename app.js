@@ -998,7 +998,7 @@ function render(templateKey, title, breadcrumb) {
 
 /** 🚀 INTERACTIVE FACTORY STREAM (Live Shift Simulation) */
 async function generateMockShiftData() {
-    if (!confirm("🏭 Start Live Production Stream? This will process 100 units one-by-one to demonstrate the real-time nature of the system.")) return;
+    if (!confirm("🏭 Start Live Production Stream? This will process 100 NEW units. Each run generates a fresh batch with randomized results.")) return;
 
     const btn = document.getElementById('sim-trigger-btn');
     if (btn) {
@@ -1006,39 +1006,61 @@ async function generateMockShiftData() {
         btn.innerHTML = '<div class="status-dot-pulse"></div> Line Active...';
     }
 
-    showToast("📡 PRODUCTION STREAM ENGAGED: Units arriving at gates...", "info", 5000);
-    const serials = Array.from({ length: 100 }, (_, i) => `A-${200 + i}`);
-    const stages = manufacturingStages.sort((a, b) => a.order - b.order);
+    // 🆕 FRESH BATCH: Unique time-stamped prefix ensures every run produces new serial numbers
+    const now = new Date();
+    const batchPrefix = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+    const batchSerials = Array.from({ length: 100 }, (_, i) => `B${batchPrefix}-${(i + 1).toString().padStart(3, '0')}`);
 
-    for (const [idx, sn] of serials.entries()) {
-        // Distribute: 85 Pass, 10 Scrap/MRB, 5 WIP
+    // 🎲 RANDOMIZED SPLIT every run: passCount 78–95, scrapCount 2–12, wip = remainder
+    const passCount = 78 + Math.floor(Math.random() * 18);
+    const scrapCount = 2 + Math.floor(Math.random() * 11);
+    const wipCount = 100 - passCount - scrapCount;
+
+    const stages = manufacturingStages.sort((a, b) => a.order - b.order);
+    showToast(`📡 BATCH ${batchPrefix}: ${passCount} PASS | ${scrapCount} MRB | ${wipCount} WIP targeted`, "info", 5000);
+
+    for (const [idx, sn] of batchSerials.entries()) {
         let status = "COMPLETED";
         let currOrder = stages.length;
+        let failedStage = null;
 
-        if (idx >= 85 && idx < 95) {
+        if (idx >= passCount && idx < passCount + scrapCount) {
+            // 🔴 MRB: fail at a random stage (min stage 1, never beyond last)
             status = "MRB_REVIEW";
-            currOrder = Math.floor(Math.random() * (stages.length - 1)) + 1;
-        } else if (idx >= 95) {
+            const failIdx = Math.max(1, Math.floor(Math.random() * stages.length));
+            failedStage = stages[failIdx - 1];
+            currOrder = failIdx;
+        } else if (idx >= passCount + scrapCount) {
+            // 🟡 WIP: stopped mid-way
             status = "IN_PROGRESS";
-            currOrder = Math.floor(Math.random() * stages.length) + 1;
+            currOrder = Math.max(1, Math.floor(Math.random() * stages.length));
         }
 
-        const unit = { serial: sn, status: status, currentStageOrder: currOrder, history: [], components: {} };
+        const unit = {
+            serial: sn,
+            status,
+            currentStageOrder: currOrder,
+            // ✅ FIX: Store the exact failed stage so rework resumes from there, not Stage 1
+            scrapStageOrder: failedStage ? failedStage.order : null,
+            scrapStageName: failedStage ? failedStage.name : null,
+            isRework: false,
+            history: [],
+            components: {}
+        };
 
         for (let o = 1; o <= currOrder; o++) {
-            const stage = stages.find(s => s.order === o);
+            const stage = stages[o - 1];
+            if (!stage) continue;
             unit.history.push({
                 stage: stage.name,
-                status: (o === currOrder && status === "MRB_REVIEW") ? "SCRAP" : "PASS",
-                operator: "System Bot",
+                status: (o === currOrder && status === "MRB_REVIEW") ? "UNIT_REJECTED" : "PASS",
+                operator: "Simulation Engine",
                 time: new Date().toLocaleTimeString()
             });
         }
 
-        // ADD to ledger (Don't clear it)
         units[sn] = unit;
 
-        // INCREMENT yield counters in real-time
         if (yieldData.inspected.length > 0) {
             const lastIdx = yieldData.inspected.length - 1;
             yieldData.inspected[lastIdx]++;
@@ -1046,10 +1068,9 @@ async function generateMockShiftData() {
             if (status === "MRB_REVIEW") yieldData.scrapped[lastIdx]++;
         }
 
-        // 🪐 CLOUD OVERHEAT PROTECTION: We push to Audit log but skip full persist per-unit to keep UI snappy
         globalAuditLog.push({
             event: status === "MRB_REVIEW" ? "UNIT_SCRAP" : "UNIT_PASS",
-            details: `S/N ${sn} ${status.toLowerCase()} at final checkpoint.`,
+            details: `S/N ${sn} — ${status === 'MRB_REVIEW' ? 'REJECTED at ' + failedStage?.name : status}.`,
             time: new Date().toLocaleString(),
             op: "Simulation Engine"
         });
@@ -1982,8 +2003,8 @@ function reworkScrappedUnit(sn) {
         pushAudit("UNIT_REWORK", `Unit ${sn} re - authorized for Stage ${unit.currentStageOrder}`);
         persistUnits();
 
-        showToast(`Unit ${sn} has been returned to Stage ${unit.currentStageOrder}.`, "warning");
-        searchUnit(); // Refresh view
+        showToast(`\u2705 Rework authorized. Unit ${sn} returned to \'${unit.scrapStageName || 'Stage ' + unit.currentStageOrder}\'. It will resume from there.`, "warning");
+        renderHeritageView(unit); // Refresh view
     }
 }
 
