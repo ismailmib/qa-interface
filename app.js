@@ -929,88 +929,291 @@ function setActiveNav(templateKey) {
 }
 
 function toggleExpandCard(cardId, containerId) {
-    const card = document.getElementById(cardId);
-    if (!card) return;
+    // 🚀 NEW APPROACH: Open a dedicated full-screen modal instead of
+    // trying to position:fixed the card (which made it invisible on dark overlay).
+    openSPCModal();
+}
 
-    const isCollapsing = card.classList.contains('card-expanded');
-    const expandIcon = document.getElementById('spc-expand-icon');
-    const expandHint = document.getElementById('spc-expand-hint');
-    const expandBtn = card.querySelector('.spc-expand-btn');
-    const spcContainer = document.getElementById('spc-container');
+function closeSPCModal() {
+    const modal = document.getElementById('spc-fullscreen-modal');
+    if (modal) {
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.97)';
+        setTimeout(() => modal.remove(), 300);
+    }
+    // Restore small hint text
+    const hint = document.getElementById('spc-expand-hint');
+    if (hint) hint.textContent = 'Click to expand ↗';
+    const icon = document.getElementById('spc-expand-icon');
+    if (icon) { icon.setAttribute('data-lucide', 'maximize-2'); lucide.createIcons(); }
+}
 
-    if (isCollapsing) {
-        // 📉 MINIMIZE
-        card.classList.remove('card-expanded');
-        const overlay = document.querySelector('.card-expand-overlay');
-        if (overlay) overlay.remove();
+function openSPCModal() {
+    // Remove any existing modal first
+    const existing = document.getElementById('spc-fullscreen-modal');
+    if (existing) { closeSPCModal(); return; }
 
-        // Reset card to original natural flow
-        card.style.position = '';
-        card.style.top = '';
-        card.style.left = '';
-        card.style.transform = '';
-        card.style.width = '';
-        card.style.height = '';
-        card.style.zIndex = '';
+    // Update hint UI
+    const hint = document.getElementById('spc-expand-hint');
+    if (hint) hint.textContent = 'ESC or click backdrop to close';
+    const icon = document.getElementById('spc-expand-icon');
+    if (icon) { icon.setAttribute('data-lucide', 'minimize-2'); lucide.createIcons(); }
 
-        if (containerId) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.style.height = '300px';
-                container.style.cursor = 'pointer';
-            }
-        }
+    // ── Build the modal shell ──
+    const modal = document.createElement('div');
+    modal.id = 'spc-fullscreen-modal';
+    modal.style.cssText = `
+        position: fixed; inset: 0; z-index: 2000;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(10, 15, 30, 0.85);
+        backdrop-filter: blur(10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        opacity: 0; transform: scale(0.97);
+    `;
 
-        // Restore expand UI state
-        if (expandIcon) { expandIcon.setAttribute('data-lucide', 'maximize-2'); lucide.createIcons(); }
-        if (expandHint) expandHint.textContent = 'Click to expand ↗';
-        if (expandBtn) expandBtn.title = 'Maximize chart';
-        if (spcContainer) spcContainer.title = 'Click to expand chart';
+    // Click backdrop to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeSPCModal();
+    });
 
-    } else {
-        // 📈 MAXIMIZE
-        const overlay = document.createElement('div');
-        overlay.className = 'card-expand-overlay';
-        overlay.onclick = () => toggleExpandCard(cardId, containerId);
-        document.body.appendChild(overlay);
+    // ── Build the inner card ──
+    const inner = document.createElement('div');
+    inner.style.cssText = `
+        background: #0f172a;
+        border: 1px solid rgba(59,130,246,0.4);
+        border-radius: 20px;
+        box-shadow: 0 0 60px rgba(59,130,246,0.2), 0 30px 80px rgba(0,0,0,0.7);
+        width: 92vw;
+        height: 88vh;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+        gap: 1rem;
+        overflow: hidden;
+    `;
 
-        card.classList.add('card-expanded');
-        if (containerId) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.style.height = '75vh';
-                container.style.cursor = 'default';
-            }
-        }
+    // ── Header row ──
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; flex-shrink:0;';
+    header.innerHTML = `
+        <div>
+            <div style="font-size:0.6rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.2em; margin-bottom:4px;">📊 Full-Screen Deep Dive</div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#fff;">Statistical Process Control (SPC) — Batch Yield Window</h3>
+            <p style="margin:4px 0 0; font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:600;">Shewhart Control Chart · X̄ ± 3σ · Real-Time Batch Data</p>
+        </div>
+        <button id="spc-modal-close-btn" style="
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 10px;
+            color: #ef4444;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 800;
+            display:flex; align-items:center; gap:6px;
+            transition: background 0.2s;
+        ">✕ Close</button>
+    `;
+    inner.appendChild(header);
 
-        // Update icon to show minimize state
-        if (expandIcon) { expandIcon.setAttribute('data-lucide', 'minimize-2'); lucide.createIcons(); }
-        if (expandHint) expandHint.textContent = 'Click ESC or overlay to close';
-        if (expandBtn) expandBtn.title = 'Minimize chart';
-        if (spcContainer) spcContainer.title = '';
+    // ── Chart canvas ──
+    const chartWrapper = document.createElement('div');
+    chartWrapper.style.cssText = 'flex: 1; position: relative; min-height: 0;';
+    const canvas = document.createElement('canvas');
+    canvas.id = 'spc-modal-canvas';
+    chartWrapper.appendChild(canvas);
+    inner.appendChild(chartWrapper);
+
+    // ── Footer stats ──
+    const footer = document.createElement('div');
+    footer.style.cssText = 'display:flex; justify-content:space-between; flex-shrink:0; font-size:0.75rem; font-weight:800; color:rgba(255,255,255,0.5); padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.06);';
+    footer.innerHTML = `
+        <span>UPPER CONTROL LIMIT (UCL): <span id="spc-modal-ucl" style="color:#a78bfa;">--</span></span>
+        <span>PROCESS MEAN (X̄): <span id="spc-modal-mean" style="color:var(--primary);">--</span></span>
+        <span>LOWER CONTROL LIMIT (LCL): <span id="spc-modal-lcl" style="color:#f87171;">--</span></span>
+    `;
+    inner.appendChild(footer);
+
+    modal.appendChild(inner);
+    document.body.appendChild(modal);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+        modal.style.transform = 'scale(1)';
+    });
+
+    // Wire close button
+    document.getElementById('spc-modal-close-btn').onclick = closeSPCModal;
+
+    // ESC key
+    const escHandler = (e) => {
+        if (e.key === 'Escape') { closeSPCModal(); document.removeEventListener('keydown', escHandler); }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // ── Render the SPC chart inside the modal ──
+    setTimeout(() => renderSPCModalChart(), 100);
+}
+
+function renderSPCModalChart() {
+    const canvas = document.getElementById('spc-modal-canvas');
+    if (!canvas) return;
+
+    // Destroy any existing chart on this canvas
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const BATCH_SIZE = 10;
+    const allUnitsArr = Object.values(units);
+    const rawBatches = [];
+    for (let i = 0; i < allUnitsArr.length; i += BATCH_SIZE) {
+        const slice = allUnitsArr.slice(i, i + BATCH_SIZE);
+        const p = slice.filter(u => u.status === 'COMPLETED').length;
+        rawBatches.push(parseFloat(((p / slice.length) * 100).toFixed(1)));
     }
 
-    // 🧱 Re-render charts with correct high-def or standard settings
-    // Wait 400ms for the CSS transition (0.3s) to fully finish layout shift
-    setTimeout(() => {
-        if (templateCache.active === 'analytics' || templateCache.active === 'executiveAnalytics') {
-            renderExecutiveCharts();
-        }
-        if (window.Chart) {
-            Object.values(Chart.instances).forEach(chart => chart.resize());
-        }
-    }, 400);
+    const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
+    const batchYields = rawBatches.length >= 2 ? rawBatches.slice(-20) : DEMO;
+    const labels = batchYields.map((_, i) => rawBatches.length >= 2 ? `Batch ${i + 1}` : `${10 + i * 5}:00`);
 
-    // ESC key support to close
-    if (!isCollapsing) {
-        const escHandler = (e) => {
-            if (e.key === 'Escape') {
-                toggleExpandCard(cardId, containerId);
-                document.removeEventListener('keydown', escHandler);
+    const n = batchYields.length;
+    const mean = batchYields.reduce((a, b) => a + b, 0) / n;
+    const variance = batchYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
+    const sigma = Math.sqrt(variance);
+    const ucl = Math.min(parseFloat((mean + 3 * sigma).toFixed(1)), 100);
+    const lcl = Math.max(parseFloat((mean - 3 * sigma).toFixed(1)), 70);
+
+    // Update modal footer
+    const uclEl = document.getElementById('spc-modal-ucl');
+    const meanEl = document.getElementById('spc-modal-mean');
+    const lclEl = document.getElementById('spc-modal-lcl');
+    if (uclEl) uclEl.textContent = ucl.toFixed(1) + '%';
+    if (meanEl) meanEl.textContent = mean.toFixed(1) + '%';
+    if (lclEl) lclEl.textContent = lcl.toFixed(1) + '%';
+    // Also sync the inline card labels
+    const uclCard = document.getElementById('spc-ucl-label');
+    const meanCard = document.getElementById('spc-mean-label');
+    const lclCard = document.getElementById('spc-lcl-label');
+    if (uclCard) uclCard.textContent = ucl.toFixed(1) + '%';
+    if (meanCard) meanCard.textContent = mean.toFixed(1) + '%';
+    if (lclCard) lclCard.textContent = lcl.toFixed(1) + '%';
+
+    const pointColors = batchYields.map(y => y < lcl ? '#ef4444' : '#10b981');
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Batch Yield %',
+                data: batchYields,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointRadius: batchYields.map(y => y < lcl ? 10 : 6),
+                pointBackgroundColor: pointColors,
+                pointBorderColor: 'rgba(255,255,255,0.6)',
+                pointBorderWidth: 2,
+                pointHoverRadius: 12
+            }, {
+                label: `UCL (${ucl.toFixed(1)}%)`,
+                data: Array(n).fill(ucl),
+                borderColor: 'rgba(167,139,250,0.7)',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointStyle: false,
+                fill: false
+            }, {
+                label: `Mean X̄ (${mean.toFixed(1)}%)`,
+                data: Array(n).fill(parseFloat(mean.toFixed(1))),
+                borderColor: 'rgba(59,130,246,0.9)',
+                borderWidth: 2,
+                borderDash: [10, 4],
+                pointStyle: false,
+                fill: false
+            }, {
+                label: `LCL (${lcl.toFixed(1)}%) — Below = OUT OF CONTROL`,
+                data: Array(n).fill(lcl),
+                borderColor: 'rgba(248,113,113,0.8)',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointStyle: false,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeInOutQuart' },
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: 'rgba(255,255,255,0.75)',
+                        font: { size: 13, weight: '700' },
+                        boxWidth: 30,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(15,23,42,0.95)',
+                    borderColor: 'rgba(59,130,246,0.5)',
+                    borderWidth: 1,
+                    titleColor: '#fff',
+                    bodyColor: 'rgba(255,255,255,0.7)',
+                    callbacks: {
+                        afterLabel(ctx) {
+                            if (ctx.datasetIndex === 0) {
+                                const y = ctx.parsed.y;
+                                if (y < lcl) return '⚠️ OUT OF CONTROL — Below LCL!';
+                                if (y > ucl) return '⚠️ ABOVE UCL — Check measurement';
+                                return '✅ Process In Control';
+                            }
+                            return null;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: Math.max(70, lcl - 5),
+                    max: 100,
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.5)',
+                        callback: v => v + '%',
+                        font: { size: 13, weight: '700' }
+                    },
+                    title: {
+                        display: true,
+                        text: 'BATCH YIELD %',
+                        color: 'rgba(255,255,255,0.3)',
+                        font: { size: 12, weight: '800' },
+                        padding: 12
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.5)',
+                        font: { size: 12, weight: '700' }
+                    },
+                    title: {
+                        display: true,
+                        text: 'PRODUCTION BATCH TIMELINE',
+                        color: 'rgba(255,255,255,0.3)',
+                        font: { size: 12, weight: '800' },
+                        padding: 12
+                    }
+                }
             }
-        };
-        document.addEventListener('keydown', escHandler);
-    }
+        }
+    });
 }
 
 function render(templateKey, title, breadcrumb) {
