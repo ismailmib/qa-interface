@@ -747,7 +747,11 @@ function handleLogin() {
         return;
     }
 
-    const user = usersData.find(u => u.accessId === accessId && u.pass === pass && u.role === roleReq);
+    const user = usersData.find(u =>
+        u.accessId.toLowerCase().trim() === normalizedID &&
+        u.pass.trim() === normalizedPass &&
+        u.role === roleReq
+    );
 
     if (!user) {
         showToast("Access Denied: Invalid credentials or role mismatch.", "error");
