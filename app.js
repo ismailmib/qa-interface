@@ -103,12 +103,31 @@ let currentBatchProgress = 84;
 let yieldData = { labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'], inspected: [120, 150, 140, 180, 160, 90, 110], passed: [115, 142, 138, 172, 155, 88, 108], scrapped: [5, 8, 2, 8, 5, 2, 2] };
 let units = {};
 let manufacturingStages = [...DEFAULT_STAGES];
-let usersData = [
-    { id: 'u1', name: 'Sarah Mitchell', role: 'admin', accessId: 'admin', pass: 'admin123', stats: { passed: 0, scrapped: 0 } },
-    { id: 'u2', name: 'Mark Robson', role: 'operator', accessId: 'operator', pass: 'operator123', stats: { passed: 0, scrapped: 0 } },
-    { id: 'u3', name: 'Ismail', role: 'admin', accessId: 'ismail', pass: '123', stats: { passed: 0, scrapped: 0 } }
-];
+// ✅ START WITH EMPTY — always load from localStorage/Firebase (prevents stale hardcoded list)
+let usersData = [];
 let globalAuditLog = [];
+
+// ⚡ INSTANT LOCAL LOAD — run synchronously before Firebase connects
+// This ensures users are always visible even if Firebase is slow/blocked
+try {
+    const localUsers = localStorage.getItem('usersData');
+    if (localUsers) usersData = JSON.parse(localUsers);
+} catch (_) { usersData = []; }
+
+// 🔀 MERGE HELPER — unions cloud + local users by accessId (never wipes either side)
+function mergeUsers(cloudList = [], localList = []) {
+    const merged = [...localList];
+    cloudList.forEach(cloudUser => {
+        const exists = merged.find(u => u.accessId === cloudUser.accessId || u.id === cloudUser.id);
+        if (!exists) merged.push(cloudUser); // add cloud users not in local
+        else {
+            // Update stats from cloud (keep freshest data) but don't overwrite name/role/pass
+            const idx = merged.indexOf(exists);
+            merged[idx] = { ...cloudUser, ...exists }; // local wins on conflicts
+        }
+    });
+    return merged;
+}
 
 // 🏺 Persistence Handlers (CLOUD + LOCAL REDUNDANCY)
 let cloudWriteLock = false; // 🔒 Prevents snapshot from overwriting during active writes
@@ -230,9 +249,18 @@ async function initSystemCloudSync() {
             db.collection('sys').doc(col).onSnapshot(doc => {
                 if (doc.exists) {
                     const cloudData = doc.data().data;
-                    // 🔒 Write-lock: skip overwrite if we just saved users to cloud
-                    if (col === 'users' && cloudWriteLock) return;
-                    if (col === 'users') usersData = cloudData;
+                    // 🔀 USERS: MERGE (not replace) to prevent newly-added users from disappearing
+                    if (col === 'users') {
+                        if (cloudWriteLock) return; // skip if we just wrote
+                        const merged = mergeUsers(cloudData, usersData);
+                        // Only update + re-persist if cloud had something new
+                        if (merged.length !== usersData.length) {
+                            usersData = merged;
+                            persistUsers(); // sync merged list back to cloud
+                        } else {
+                            usersData = merged;
+                        }
+                    }
                     if (col === 'stages') manufacturingStages = cloudData;
                     if (col === 'analytics') yieldData = cloudData;
                     if (col === 'ledger') units = cloudData;
