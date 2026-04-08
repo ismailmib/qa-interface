@@ -1985,31 +1985,146 @@ function renderHeritageView(unit) {
 
 /** 📊 SHARED LEDGER TABLE RENDERER */
 function renderLedgerTable(filteredUnits, container) {
-    container.innerHTML = `
-        <div class="card glass animate-up" style="padding:0; overflow:hidden;">
-            <div class="table-container" style="border:none;">
-                <table>
-                    <thead>
-                        <tr><th>SERIAL / ID</th><th>LAST KNOWN STAGE</th><th>LIVE STATUS</th><th>LAST EVENT</th><th>HERITAGE</th></tr>
-                    </thead>
-                    <tbody>
-                        ${filteredUnits.map(u => `
-                            <tr>
-                                <td style="font-family:monospace; font-weight:800;">${u.serial}</td>
-                                <td><span style="font-size:0.75rem; font-weight:800;">${u.history.length > 0 ? u.history[u.history.length - 1].stage : '--'}</span></td>
-                                <td>
-                                    <span class="badge ${u.status === 'COMPLETED' ? 'badge-success' : (u.status === 'MRB_REVIEW' ? 'badge-error' : 'badge-warning')}">
-                                        ${u.status.replace('_', ' ')}
-                                    </span>
-                                </td>
-                                <td class="text-muted" style="font-size:0.65rem;">${u.history.length > 0 ? u.history[u.history.length - 1].time : '--'}</td>
-                                <td><button class="btn btn-outline" style="font-size:0.65rem; padding: 4px 10px;" onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">View Full Trace</button></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+    const allUnits = Object.values(units);
+    const totalStages = Math.max(manufacturingStages.length, 1);
+
+    // ── Fleet Summary (always from full dataset, not filtered) ──────────
+    const summary = {
+        total: allUnits.length,
+        passed: allUnits.filter(u => u.status === 'COMPLETED').length,
+        mrb: allUnits.filter(u => u.status === 'MRB_REVIEW').length,
+        wip: allUnits.filter(u => u.status === 'IN_PROGRESS').length,
+        scrap: allUnits.filter(u => u.status === 'SCRAP').length,
+    };
+
+    // ── Sort: newest batch first, highest unit number first ─────────────
+    const getPrefix = sn => { const m = sn.match(/^B(\d{6})-/); return m ? m[1] : '000000'; };
+    const getUnitNo = sn => parseInt(sn.split('-').pop()) || 0;
+    const sorted = [...filteredUnits].sort((a, b) => {
+        const pA = getPrefix(a.serial), pB = getPrefix(b.serial);
+        if (pB !== pA) return pB.localeCompare(pA);
+        return getUnitNo(b.serial) - getUnitNo(a.serial);
+    });
+
+    // ── Group by batch prefix ───────────────────────────────────────────
+    const batches = {}, batchOrder = [];
+    sorted.forEach(u => {
+        const m = u.serial.match(/^(B\d{6})/);
+        const key = m ? m[1] : 'LEGACY';
+        if (!batches[key]) { batches[key] = []; batchOrder.push(key); }
+        batches[key].push(u);
+    });
+
+    // ── Helpers ─────────────────────────────────────────────────────────
+    const statusBadge = u => {
+        const map = {
+            COMPLETED: ['badge-success', '✅ PASSED'],
+            MRB_REVIEW: ['badge-error', '🔴 MRB REVIEW'],
+            IN_PROGRESS: ['badge-warning', '🔄 IN PROGRESS'],
+            SCRAP: ['', '⬛ SCRAPPED'],
+        };
+        const [cls, lbl] = map[u.status] || ['', u.status];
+        return `<span class="badge ${cls}" style="font-size:0.6rem; white-space:nowrap;">${u.isRework ? '♻️ REWORK' : lbl}</span>`;
+    };
+
+    const rowBg = u => {
+        if (u.status === 'MRB_REVIEW') return 'background:rgba(239,68,68,0.07); border-left:3px solid var(--error);';
+        if (u.status === 'COMPLETED') return 'border-left:3px solid var(--success);';
+        if (u.status === 'SCRAP') return 'background:rgba(100,100,100,0.06); border-left:3px solid #555; opacity:0.7;';
+        return 'border-left:3px solid var(--primary);';
+    };
+
+    const stageBar = u => {
+        const pct = Math.round((Math.min(u.currentStageOrder, totalStages) / totalStages) * 100);
+        const color = u.status === 'COMPLETED' ? 'var(--success)' : u.status === 'MRB_REVIEW' ? 'var(--error)' : 'var(--primary)';
+        return `<div style="min-width:80px;">
+            <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
             </div>
+            <div style="font-size:0.52rem;color:var(--text-muted);margin-top:2px;text-align:center;">Stage ${u.currentStageOrder} / ${totalStages}</div>
         </div>`;
+    };
+
+    // ── Summary Bar ─────────────────────────────────────────────────────
+    const summaryBar = `
+        <div style="display:flex;gap:1.25rem;flex-wrap:wrap;align-items:center;padding:0.9rem 1.25rem;
+                    background:rgba(255,255,255,0.03);border:1px solid var(--border);
+                    border-radius:12px;margin-bottom:1.5rem;">
+            <span style="font-size:0.6rem;font-weight:900;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Fleet Snapshot</span>
+            <span style="font-size:0.8rem;font-weight:800;">${summary.total} <span style="font-size:0.6rem;font-weight:600;color:var(--text-muted);">TOTAL</span></span>
+            <span style="color:var(--success);font-size:0.8rem;font-weight:800;">● ${summary.passed} <span style="font-size:0.6rem;font-weight:600;">PASSED</span></span>
+            <span style="color:var(--error);font-size:0.8rem;font-weight:800;">■ ${summary.mrb} <span style="font-size:0.6rem;font-weight:600;">MRB</span></span>
+            <span style="color:var(--primary);font-size:0.8rem;font-weight:800;">◐ ${summary.wip} <span style="font-size:0.6rem;font-weight:600;">WIP</span></span>
+            ${summary.scrap > 0 ? `<span style="color:#888;font-size:0.8rem;font-weight:800;">✕ ${summary.scrap} <span style="font-size:0.6rem;font-weight:600;">SCRAP</span></span>` : ''}
+            <span style="margin-left:auto;font-size:0.6rem;color:var(--text-muted);">
+                Showing <strong style="color:var(--text);">${filteredUnits.length}</strong> of ${summary.total} units
+                &nbsp;•&nbsp; ${batchOrder.length} batch${batchOrder.length !== 1 ? 'es' : ''}
+            </span>
+        </div>`;
+
+    // ── Batch Groups ────────────────────────────────────────────────────
+    const batchGroups = batchOrder.map(key => {
+        const bUnits = batches[key];
+        const bPassed = bUnits.filter(u => u.status === 'COMPLETED').length;
+        const bMRB = bUnits.filter(u => u.status === 'MRB_REVIEW').length;
+        const bWIP = bUnits.filter(u => u.status === 'IN_PROGRESS').length;
+
+        // Parse HH:MM:SS from key like B223527
+        const h = key.slice(1, 3), mi = key.slice(3, 5), s = key.slice(5, 7);
+        const timeStr = key !== 'LEGACY' ? `${h}:${mi}:${s}` : '';
+        const batchLabel = key !== 'LEGACY' ? key : 'Legacy / Manual Entries';
+
+        const rows = bUnits.map(u => `
+            <tr style="${rowBg(u)}">
+                <td style="font-family:monospace;font-weight:800;font-size:0.78rem;">${u.serial}</td>
+                <td style="font-size:0.72rem;font-weight:700;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${u.history.length > 0 ? u.history[u.history.length - 1].stage : '--'}
+                </td>
+                <td>${statusBadge(u)}</td>
+                <td>${stageBar(u)}</td>
+                <td class="text-muted" style="font-size:0.62rem;white-space:nowrap;">
+                    ${u.history.length > 0 ? u.history[u.history.length - 1].time : '--'}
+                </td>
+                <td>
+                    <button class="btn btn-outline" style="font-size:0.6rem;padding:3px 9px;white-space:nowrap;"
+                        onclick="document.getElementById('search-serial').value='${u.serial}'; searchUnit();">
+                        View Trace
+                    </button>
+                </td>
+            </tr>`).join('');
+
+        return `
+            <div style="margin-bottom:2rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;
+                            padding:0.65rem 1rem;background:rgba(255,255,255,0.05);
+                            border-radius:10px 10px 0 0;border-bottom:2px solid var(--border);">
+                    <i data-lucide="layers" style="width:14px;height:14px;color:var(--text-muted);"></i>
+                    <span style="font-family:monospace;font-weight:900;font-size:0.85rem;">${batchLabel}</span>
+                    <span style="font-size:0.65rem;color:var(--text-muted);">— ${bUnits.length} units</span>
+                    ${timeStr ? `<span style="font-size:0.65rem;color:var(--text-muted);">@ ${timeStr}</span>` : ''}
+                    <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center;">
+                        <span style="font-size:0.65rem;font-weight:800;color:var(--success);">✅ ${bPassed} passed</span>
+                        ${bMRB > 0 ? `<span style="font-size:0.65rem;font-weight:800;color:var(--error);">🔴 ${bMRB} MRB</span>` : ''}
+                        ${bWIP > 0 ? `<span style="font-size:0.65rem;font-weight:800;color:var(--primary);">🔄 ${bWIP} WIP</span>` : ''}
+                    </div>
+                </div>
+                <div class="card glass" style="padding:0;overflow:hidden;border-radius:0 0 12px 12px;border-top:none;margin-top:0;">
+                    <div class="table-container" style="border:none;margin:0;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>SERIAL</th><th>LAST STAGE</th><th>STATUS</th>
+                                    <th>PROGRESS</th><th>TIMESTAMP</th><th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+
+    container.innerHTML = summaryBar + batchGroups;
     lucide.createIcons();
 }
 
