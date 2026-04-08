@@ -1817,24 +1817,52 @@ function searchUnit() {
 
 function renderHeritageView(unit) {
     const resultArea = document.getElementById('trace-result-area');
-    resultArea.innerHTML = `
-        <div class="dashboard-grid animate-up">
-            <div class="card glass" style="border-left: 5px solid ${unit.status === 'COMPLETED' ? 'var(--success)' : 'var(--error)'}">
-                <h3 class="section-title-sm">Unit Pulse</h3>
-                <div style="font-size: 1.5rem; font-weight: 900; color: var(--text-bright);">${unit.serial}</div>
-                <div class="badge ${unit.status === 'COMPLETED' ? 'badge-success' : 'badge-error'}">${unit.status.replace('_', ' ')}</div>
-                <div class="text-muted" style="margin-top:0.5rem; font-size:0.7rem;">Currently at: <strong>${unit.history.length > 0 ? unit.history[unit.history.length - 1].stage : 'Initial Scan'}</strong></div>
-                <button class="btn btn-outline w-full" style="margin-top:1.5rem;" onclick="runLiveFilter(); document.getElementById('search-serial').value='';"><i data-lucide="arrow-left" style="width:14px;"></i> Return to Global Matrix</button>
+
+    // ⚔️ MRB DECISION CONSOLE: Only shows for units requiring management signature
+    let mrbConsole = '';
+    if (unit.status === 'MRB_REVIEW') {
+        mrbConsole = `
+            <div class="card" style="background: rgba(239, 68, 68, 0.1); border: 2px solid var(--error); margin-bottom: 2rem; padding: 1.5rem;">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 style="color: var(--error); font-weight: 800; margin-bottom: 0.5rem;"><i data-lucide="shield-alert" style="width:18px; vertical-align:middle; margin-right:8px;"></i> Awaiting Executive Decision</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">This unit failed a critical checkpoint. As a Manager, you must decide its fate.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="btn btn-outline" style="border-color: var(--success); color: var(--success);" onclick="reworkScrappedUnit('${unit.serial}')">
+                            <i data-lucide="rotate-ccw" style="width:16px"></i> Authorize Rework
+                        </button>
+                        <button class="btn btn-primary" style="background: var(--error); border:none;" onclick="finalScrapUnit('${unit.serial}')">
+                            <i data-lucide="trash-2" style="width:16px"></i> Final Scrap (Write-off)
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="card glass">
-                <h3 class="section-title-sm">Birth Log: Historical Trace</h3>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>Stage</th><th>Status</th><th>Operator</th><th>Time</th></tr></thead>
-                        <tbody>
-                            ${unit.history.map(h => `<tr><td><strong>${h.stage}</strong></td><td><span class="badge ${h.status === 'PASS' ? 'badge-success' : 'badge-error'}">${h.status}</span></td><td>${h.operator}</td><td class="text-muted">${h.time}</td></tr>`).join('')}
-                        </tbody>
-                    </table>
+        `;
+    }
+
+    resultArea.innerHTML = `
+        <div class="animate-up">
+            ${mrbConsole}
+            
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr;">
+                <div class="card glass" style="border-left: 5px solid ${unit.status === 'COMPLETED' ? 'var(--success)' : (unit.status === 'MRB_REVIEW' ? 'var(--error)' : 'var(--warning)')}">
+                    <h3 class="section-title-sm">Unit Pulse</h3>
+                    <div style="font-size: 1.5rem; font-weight: 900; color: var(--text-bright);">${unit.serial}</div>
+                    <div class="badge ${unit.status === 'COMPLETED' ? 'badge-success' : (unit.status === 'MRB_REVIEW' ? 'badge-error' : 'badge-warning')}">${unit.status.replace('_', ' ')}</div>
+                    <div class="text-muted" style="margin-top:0.5rem; font-size:0.7rem;">Currently at: <strong>${unit.history.length > 0 ? unit.history[unit.history.length - 1].stage : 'Initial Scan'}</strong></div>
+                    <button class="btn btn-outline w-full" style="margin-top:1.5rem;" onclick="runLiveFilter(); document.getElementById('search-serial').value='';"><i data-lucide="arrow-left" style="width:14px;"></i> Return to Global Matrix</button>
+                </div>
+                <div class="card glass" style="padding:0; overflow:hidden;">
+                    <h3 class="section-title-sm" style="padding: 1.5rem; margin:0; border-bottom: 1px solid var(--border);">Birth Log: Historical Trace</h3>
+                    <div class="table-container" style="border:none;">
+                        <table>
+                            <thead><tr><th>Stage</th><th>Status</th><th>Operator</th><th>Time</th></tr></thead>
+                            <tbody>
+                                ${unit.history.slice().reverse().map(h => `<tr><td><strong>${h.stage}</strong></td><td><span class="badge ${h.status === 'PASS' ? 'badge-success' : (h.status === 'SCRAP' || h.status === 'FAIL' ? 'badge-error' : 'badge-warning')}">${h.status}</span></td><td>${h.operator}</td><td class="text-muted">${h.time}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>`;
@@ -2144,75 +2172,83 @@ function goToMRB() {
 }
 
 function renderExecutiveCharts() {
-    // 1. SPC Chart (Statistical Process Control)
-    const spcCtx = document.getElementById('spc-yield-chart');
-    if (spcCtx) {
-        new Chart(spcCtx, {
-            type: 'line',
-            data: {
-                labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
-                datasets: [{
-                    label: 'Live Yield %',
-                    data: [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#10b981'
-                }, {
-                    label: 'LCL (Warning)',
-                    data: Array(10).fill(92.0),
-                    borderColor: 'rgba(239, 68, 68, 0.4)',
-                    borderDash: [5, 5],
-                    pointStyle: false,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
-                    x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
-                }
-            }
-        });
-    }
+    // ⚡ FIX: Added slight delay to ensure DOM is ready and Chart.js is registered
+    setTimeout(() => {
+        if (typeof Chart === 'undefined') {
+            console.error("Chart.js not loaded yet. Retrying...");
+            return;
+        }
 
-    // 2. Monthly Trend Chart (Digital vs Manual Heritage)
-    const trendCtx = document.getElementById('monthly-trend-chart');
-    if (trendCtx) {
-        new Chart(trendCtx, {
-            type: 'bar',
-            data: {
-                labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current (Digital)"],
-                datasets: [{
-                    label: 'Legacy Manual Yield %',
-                    data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 4
-                }, {
-                    label: 'Digital System Yield %',
-                    data: [null, null, null, null, null, null, 98.8],
-                    backgroundColor: '#8b5cf6',
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { size: 10 } } } },
-                scales: {
-                    y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
-                    x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+        // 1. SPC Chart (Statistical Process Control)
+        const spcCtx = document.getElementById('spc-yield-chart');
+        if (spcCtx) {
+            new Chart(spcCtx, {
+                type: 'line',
+                data: {
+                    labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
+                    datasets: [{
+                        label: 'Live Yield %',
+                        data: [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10b981'
+                    }, {
+                        label: 'LCL (Warning)',
+                        data: Array(10).fill(92.0),
+                        borderColor: 'rgba(239, 68, 68, 0.4)',
+                        borderDash: [5, 5],
+                        pointStyle: false,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                    }
                 }
-            }
-        });
-    }
+            });
+        }
 
-    // 3. Bottleneck Analysis Logic
+        // 2. Monthly Trend Chart
+        const trendCtx = document.getElementById('monthly-trend-chart');
+        if (trendCtx) {
+            new Chart(trendCtx, {
+                type: 'bar',
+                data: {
+                    labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current (Digital)"],
+                    datasets: [{
+                        label: 'Legacy Manual Yield %',
+                        data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: 4
+                    }, {
+                        label: 'Digital System Yield %',
+                        data: [null, null, null, null, null, null, 98.8],
+                        backgroundColor: '#8b5cf6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { size: 10 } } } },
+                    scales: {
+                        y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                    }
+                }
+            });
+        }
+    }, 100);
+
+    // 3. Bottleneck Analysis Logic (Immediate)
     const list = document.getElementById('bottleneck-action-list');
     if (list) {
         const bottlenecks = manufacturingStages.filter(s => {
@@ -2222,11 +2258,7 @@ function renderExecutiveCharts() {
         });
 
         if (bottlenecks.length === 0) {
-            list.innerHTML = `
-                <div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
-                    <i data-lucide="check-circle-2" style="width:32px; height:32px; color:var(--success); margin: 0 auto 0.5rem; opacity:0.5;"></i>
-                    <p class="text-muted" style="font-size:0.7rem;">All stations performing within safety benchmarks.</p>
-                </div>`;
+            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;"><i data-lucide="check-circle-2" style="width:32px; height:32px; color:var(--success); margin: 0 auto 0.5rem; opacity:0.5;"></i><p class="text-muted" style="font-size:0.7rem;">All stations performing within safety benchmarks.</p></div>`;
             lucide.createIcons();
         } else {
             list.innerHTML = bottlenecks.map(s => {
@@ -2236,16 +2268,32 @@ function renderExecutiveCharts() {
                     <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius:12px; padding: 1rem; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div style="font-weight:800; font-size:0.85rem; color:var(--error); margin-bottom:0.2rem;">${s.name}</div>
-                            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">⚠️ ${data.ins - data.pass} REJECTIONS RECORDED</div>
+                            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">⚠️ ${data.ins - data.pass} REJECTIONS</div>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-size: 1.25rem; font-weight: 900; color: var(--error);">${yieldVal}%</div>
-                            <div style="font-size: 0.55rem; color: var(--error); font-weight:800; letter-spacing:0.05em;">BELOW LIMIT</div>
-                        </div>
-                    </div>
-                `;
+                        <div style="text-align:right;"><div style="font-size: 1.25rem; font-weight: 900; color: var(--error);">${yieldVal}%</div></div>
+                    </div>`;
             }).join('');
         }
+    }
+}
+
+function finalScrapUnit(sn) {
+    if (!confirm(`⚠️ FINAL DECISION: Are you sure you want to permanently scrap unit ${sn}? This action is final and will log a financial loss.`)) return;
+
+    const unit = units[sn];
+    if (unit) {
+        unit.status = "SCRAP";
+        unit.history.push({
+            stage: "MRB_DECISION",
+            status: "FINAL_SCRAP",
+            operator: currentUser.name,
+            time: new Date().toLocaleString(),
+            note: "Managerial write-off authorized."
+        });
+        pushAudit("UNIT_SCRAPPED", `Executive scrap authorization for ${sn}`);
+        persistUnits();
+        showToast(`Unit ${sn} has been permanently scrapped.`, "error");
+        renderHeritageView(unit); // Refresh view
     }
 }
 
