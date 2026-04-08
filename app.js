@@ -1074,12 +1074,14 @@ function renderSPCModalChart() {
     }
 
     const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
-    const batchYields = rawBatches.length >= 2 ? rawBatches.slice(-20) : DEMO;
-    const labels = batchYields.map((_, i) => rawBatches.length >= 2 ? `Batch ${i + 1}` : `${10 + i * 5}:00`);
+    const useDemo = rawBatches.length < 2;
+    const allYields = useDemo ? DEMO : rawBatches; // ALL batches for consistent stats
+    const batchYields = allYields.slice(-20); // Last 20 for display
+    const labels = batchYields.map((_, i) => useDemo ? `${10 + i * 5}:00` : `Batch ${allYields.length - batchYields.length + i + 1}`);
 
-    const n = batchYields.length;
-    const mean = batchYields.reduce((a, b) => a + b, 0) / n;
-    const variance = batchYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
+    const n = allYields.length; // Stats computed from FULL dataset
+    const mean = allYields.reduce((a, b) => a + b, 0) / n;
+    const variance = allYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
     const sigma = Math.sqrt(variance);
     const ucl = Math.min(parseFloat((mean + 3 * sigma).toFixed(1)), 100);
     const lcl = Math.max(parseFloat((mean - 3 * sigma).toFixed(1)), 70);
@@ -3128,16 +3130,18 @@ function renderExecutiveCharts() {
                 }
 
                 // Fall back to demo data if < 2 real batches
-                const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2];
-                const batchYields = rawBatches.length >= 2 ? rawBatches.slice(-12) : DEMO;
-                const labels = batchYields.map((_, i) => rawBatches.length >= 2
-                    ? `Batch ${i + 1}`
-                    : `${10 + i * 15}:00`.replace(/^(\d)/, '0$1').slice(0, 5));
+                const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
+                const useDemo = rawBatches.length < 2;
+                const allYields = useDemo ? DEMO : rawBatches; // ALL batches for stats
+                const batchYields = allYields.slice(-20); // Last 20 for display
+                const labels = batchYields.map((_, i) => useDemo
+                    ? `${10 + i * 5}:00`
+                    : `Batch ${allYields.length - batchYields.length + i + 1}`);
 
-                // ── Shewhart Calculations ──
-                const n = batchYields.length;
-                const mean = batchYields.reduce((a, b) => a + b, 0) / n;
-                const variance = batchYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
+                // ── Shewhart Calculations (computed from FULL dataset for consistency) ──
+                const n = allYields.length;
+                const mean = allYields.reduce((a, b) => a + b, 0) / n;
+                const variance = allYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
                 const sigma = Math.sqrt(variance);
                 const ucl = Math.min(parseFloat((mean + 3 * sigma).toFixed(1)), 100);
                 const lcl = Math.max(parseFloat((mean - 3 * sigma).toFixed(1)), 70);
