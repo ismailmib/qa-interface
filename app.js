@@ -111,9 +111,18 @@ let usersData = [
 let globalAuditLog = [];
 
 // 🏺 Persistence Handlers (CLOUD + LOCAL REDUNDANCY)
+let cloudWriteLock = false; // 🔒 Prevents snapshot from overwriting during active writes
+
 async function persistUsers() {
     localStorage.setItem('usersData', JSON.stringify(usersData));
-    if (cloudActive) await db.collection('sys').doc('users').set({ data: usersData });
+    if (cloudActive) {
+        cloudWriteLock = true;
+        try {
+            await db.collection('sys').doc('users').set({ data: usersData });
+        } finally {
+            setTimeout(() => { cloudWriteLock = false; }, 1500); // Release lock after 1.5s
+        }
+    }
 }
 
 async function persistStages() {
@@ -203,6 +212,8 @@ async function initSystemCloudSync() {
             db.collection('sys').doc(col).onSnapshot(doc => {
                 if (doc.exists) {
                     const cloudData = doc.data().data;
+                    // 🔒 Write-lock: skip overwrite if we just saved users to cloud
+                    if (col === 'users' && cloudWriteLock) return;
                     if (col === 'users') usersData = cloudData;
                     if (col === 'stages') manufacturingStages = cloudData;
                     if (col === 'analytics') yieldData = cloudData;
@@ -1998,20 +2009,39 @@ function populateUserList() {
 function showAddUserModal() { document.getElementById('user-modal').classList.remove('hidden'); }
 function closeUserModal() { document.getElementById('user-modal').classList.add('hidden'); }
 
-function saveNewUser(e) {
+async function saveNewUser(e) {
     e.preventDefault();
+    const nameVal = document.getElementById('new-user-name').value.trim();
+    const idVal = document.getElementById('new-user-id').value.toLowerCase().trim();
+    const passVal = document.getElementById('new-user-pass').value.trim();
+    const roleVal = document.getElementById('new-user-role').value;
+
+    if (!nameVal || !idVal || !passVal) {
+        showToast('All fields are required.', 'error');
+        return;
+    }
+
+    // Check for duplicates
+    if (usersData.find(u => u.accessId.toLowerCase() === idVal)) {
+        showToast(`Access ID '${idVal}' already exists. Choose another.`, 'error');
+        return;
+    }
+
     const newUser = {
         id: 'u_' + Date.now(),
-        name: document.getElementById('new-user-name').value,
-        accessId: document.getElementById('new-user-id').value.toLowerCase().trim(),
-        pass: document.getElementById('new-user-pass').value.trim(),
-        role: document.getElementById('new-user-role').value,
+        name: nameVal,
+        accessId: idVal,
+        pass: passVal,
+        role: roleVal,
         stats: { passed: 0, scrapped: 0 }
     };
+
     usersData.push(newUser);
-    persistUsers();
     closeUserModal();
     populateUserList();
+    showToast(`Uploading ${nameVal} to cloud...`, 'warning');
+    await persistUsers(); // ✅ Await so cloud write completes before snapshot can fire
+    showToast(`✅ ${nameVal} added. They can log in now.`, 'success');
 }
 
 function deleteUser(id) {
