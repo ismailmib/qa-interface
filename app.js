@@ -1999,8 +1999,8 @@ function saveNewUser(e) {
     const newUser = {
         id: 'u_' + Date.now(),
         name: document.getElementById('new-user-name').value,
-        accessId: document.getElementById('new-user-id').value,
-        pass: document.getElementById('new-user-pass').value,
+        accessId: document.getElementById('new-user-id').value.toLowerCase().trim(),
+        pass: document.getElementById('new-user-pass').value.trim(),
         role: document.getElementById('new-user-role').value,
         stats: { passed: 0, scrapped: 0 }
     };
