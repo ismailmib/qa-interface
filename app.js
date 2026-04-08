@@ -469,6 +469,16 @@ const templates = {
                             </div>
                         </div>
                     </div>
+
+                    <div class="card glass" style="border-top: 3px solid var(--error); padding: 1.25rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h4 style="font-size:0.65rem; font-weight:900; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin:0;">⚡ Urgent MRB Queue</h4>
+                            <button class="btn btn-outline" style="font-size:0.6rem; padding:3px 10px;" onclick="showTraceability()">View All</button>
+                        </div>
+                        <div id="quick-mrb-list" class="flex flex-col" style="gap:0.5rem;">
+                            <div class="text-muted" style="font-size:0.65rem; text-align:center; padding:1rem 0;">No units awaiting decision.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1416,6 +1426,8 @@ function updateAdminGauges() {
 
     // Live Shift Summary card
     updateShiftSummaryCard();
+    // Urgent MRB Queue card
+    updateQuickMRBList();
 }
 
 function updateShiftSummaryCard() {
@@ -1472,6 +1484,41 @@ function updateShiftSummaryCard() {
     // Colour-code MRB
     const mrbEl = document.getElementById('shift-mrb-card-val');
     if (mrbEl) mrbEl.style.color = mrb === 0 ? 'var(--success)' : mrb < 5 ? 'var(--warning)' : 'var(--error)';
+}
+
+function updateQuickMRBList() {
+    const listEl = document.getElementById('quick-mrb-list');
+    if (!listEl) return;
+
+    const mrbUnits = Object.values(units)
+        .filter(u => u.status === 'MRB_REVIEW')
+        .sort((a, b) => {
+            // Newest first
+            const timeA = a.history[a.history.length - 1]?.time || '';
+            const timeB = b.history[b.history.length - 1]?.time || '';
+            return timeB.localeCompare(timeA);
+        })
+        .slice(0, 5); // Just top 5
+
+    if (mrbUnits.length === 0) {
+        listEl.innerHTML = `<div class="text-muted" style="font-size:0.65rem; text-align:center; padding:1rem 0;">No units awaiting decision.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = mrbUnits.map(u => `
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:0.6rem; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:0.75rem; font-weight:800; color:var(--text-main);">${u.serial}</div>
+                <div style="font-size:0.55rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; margin-top:2px;">
+                    ${u.history[u.history.length - 1]?.stage || 'Unknown Stage'}
+                </div>
+            </div>
+            <button class="btn btn-outline" style="font-size:0.55rem; padding:4px 10px; border-color:var(--error); color:var(--error);"
+                onclick="renderHeritageView(units['${u.serial}'])">
+                Review
+            </button>
+        </div>
+    `).join('');
 }
 
 function updateStageHeatmap(containerId) {
