@@ -517,14 +517,17 @@ const templates = {
             </div>
 
             <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
-                <div class="card glass" id="card-spc">
-                    <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
-                        <h3 class="section-title-sm" style="margin:0;">Statistical Process Control (SPC) — Batch Yield Window</h3>
-                        <button class="btn btn-icon" style="background:none; border:none; color:var(--text-muted); padding:0;" onclick="toggleExpandCard('card-spc', 'spc-container')">
-                            <i data-lucide="maximize-2" style="width:18px;"></i>
+                <div class="card glass spc-card-clickable" id="card-spc">
+                    <div class="flex justify-between items-center" style="margin-bottom: 1.5rem; cursor: pointer;" onclick="toggleExpandCard('card-spc', 'spc-container')" title="Click to expand for full-screen view">
+                        <div style="display:flex; align-items:center; gap: 0.75rem;">
+                            <h3 class="section-title-sm" style="margin:0;">Statistical Process Control (SPC) — Batch Yield Window</h3>
+                            <span id="spc-expand-hint" style="font-size:0.55rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.15em; opacity:0.7;">Click to expand ↗</span>
+                        </div>
+                        <button class="btn btn-icon spc-expand-btn" style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); border-radius:8px; color:var(--primary); padding:6px; transition:all 0.2s;" onclick="event.stopPropagation(); toggleExpandCard('card-spc', 'spc-container')" title="Maximize chart">
+                            <i data-lucide="maximize-2" id="spc-expand-icon" style="width:16px; height:16px;"></i>
                         </button>
                     </div>
-                    <div style="height:300px; position: relative;" id="spc-container">
+                    <div style="height:300px; position: relative; cursor: pointer;" id="spc-container" onclick="toggleExpandCard('card-spc', 'spc-container')" title="Click to expand chart">
                         <canvas id="spc-yield-chart"></canvas>
                         <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
                     </div>
@@ -930,6 +933,10 @@ function toggleExpandCard(cardId, containerId) {
     if (!card) return;
 
     const isCollapsing = card.classList.contains('card-expanded');
+    const expandIcon = document.getElementById('spc-expand-icon');
+    const expandHint = document.getElementById('spc-expand-hint');
+    const expandBtn = card.querySelector('.spc-expand-btn');
+    const spcContainer = document.getElementById('spc-container');
 
     if (isCollapsing) {
         // 📉 MINIMIZE
@@ -937,7 +944,7 @@ function toggleExpandCard(cardId, containerId) {
         const overlay = document.querySelector('.card-expand-overlay');
         if (overlay) overlay.remove();
 
-        // Reset card to original natural flow (remove any inline overrides)
+        // Reset card to original natural flow
         card.style.position = '';
         card.style.top = '';
         card.style.left = '';
@@ -948,8 +955,18 @@ function toggleExpandCard(cardId, containerId) {
 
         if (containerId) {
             const container = document.getElementById(containerId);
-            if (container) container.style.height = '300px';
+            if (container) {
+                container.style.height = '300px';
+                container.style.cursor = 'pointer';
+            }
         }
+
+        // Restore expand UI state
+        if (expandIcon) { expandIcon.setAttribute('data-lucide', 'maximize-2'); lucide.createIcons(); }
+        if (expandHint) expandHint.textContent = 'Click to expand ↗';
+        if (expandBtn) expandBtn.title = 'Maximize chart';
+        if (spcContainer) spcContainer.title = 'Click to expand chart';
+
     } else {
         // 📈 MAXIMIZE
         const overlay = document.createElement('div');
@@ -960,8 +977,17 @@ function toggleExpandCard(cardId, containerId) {
         card.classList.add('card-expanded');
         if (containerId) {
             const container = document.getElementById(containerId);
-            if (container) container.style.height = '70vh';
+            if (container) {
+                container.style.height = '75vh';
+                container.style.cursor = 'default';
+            }
         }
+
+        // Update icon to show minimize state
+        if (expandIcon) { expandIcon.setAttribute('data-lucide', 'minimize-2'); lucide.createIcons(); }
+        if (expandHint) expandHint.textContent = 'Click ESC or overlay to close';
+        if (expandBtn) expandBtn.title = 'Minimize chart';
+        if (spcContainer) spcContainer.title = '';
     }
 
     // 🧱 Re-render charts with correct high-def or standard settings
@@ -974,6 +1000,17 @@ function toggleExpandCard(cardId, containerId) {
             Object.values(Chart.instances).forEach(chart => chart.resize());
         }
     }, 400);
+
+    // ESC key support to close
+    if (!isCollapsing) {
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                toggleExpandCard(cardId, containerId);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
 }
 
 function render(templateKey, title, breadcrumb) {
