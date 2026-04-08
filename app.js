@@ -1064,22 +1064,36 @@ function renderSPCModalChart() {
     const existing = Chart.getChart(canvas);
     if (existing) existing.destroy();
 
-    const BATCH_SIZE = 10;
-    const allUnitsArr = Object.values(units);
-    const rawBatches = [];
-    for (let i = 0; i < allUnitsArr.length; i += BATCH_SIZE) {
-        const slice = allUnitsArr.slice(i, i + BATCH_SIZE);
-        const p = slice.filter(u => u.status === 'COMPLETED').length;
-        rawBatches.push(parseFloat(((p / slice.length) * 100).toFixed(1)));
-    }
+
+    // ── Group by REAL batch label (per production run) ──
+    const batchMap = new Map();
+    Object.values(units).forEach(u => {
+        const label = u.batchLabel || u.serial.split('-')[0]; // fallback: extract prefix from serial
+        if (!batchMap.has(label)) batchMap.set(label, { total: 0, passed: 0 });
+        const b = batchMap.get(label);
+        b.total++;
+        if (u.status === 'COMPLETED') b.passed++;
+    });
 
     const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
-    const useDemo = rawBatches.length < 2;
-    const allYields = useDemo ? DEMO : rawBatches; // ALL batches for consistent stats
-    const batchYields = allYields.slice(-20); // Last 20 for display
-    const labels = batchYields.map((_, i) => useDemo ? `${10 + i * 5}:00` : `Batch ${allYields.length - batchYields.length + i + 1}`);
+    const useDemo = batchMap.size < 2;
 
-    const n = allYields.length; // Stats computed from FULL dataset
+    let allYields, batchYields, labels;
+    if (useDemo) {
+        allYields = DEMO;
+        batchYields = DEMO;
+        labels = DEMO.map((_, i) => `Demo ${i + 1}`);
+    } else {
+        // Convert map to sorted array of yields
+        const entries = Array.from(batchMap.entries())
+            .sort((a, b) => a[0].localeCompare(b[0])); // sort chronologically by batch prefix
+        allYields = entries.map(([, v]) => parseFloat(((v.passed / v.total) * 100).toFixed(1)));
+        batchYields = allYields.slice(-20); // show last 20 batches
+        const allKeys = entries.map(([k]) => k);
+        labels = allKeys.slice(-20).map((k, i) => `Batch ${allYields.length - batchYields.length + i + 1}`);
+    }
+
+    const n = allYields.length; // Stats from full dataset
     const mean = allYields.reduce((a, b) => a + b, 0) / n;
     const variance = allYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
     const sigma = Math.sqrt(variance);
@@ -1618,6 +1632,7 @@ async function generateMockShiftData(batchSz) {
 
         const unit = {
             serial: sn,
+            batchLabel: `Batch ${batchPrefix}`, // 🏷️ Tag each unit with its real batch ID
             status,
             currentStageOrder: currOrder,
             scrapStageOrder: failedStage ? failedStage.order : null,
@@ -3120,23 +3135,32 @@ function renderExecutiveCharts() {
                 const dotSize = isExpanded ? 10 : 5;
                 const activeDotSize = isExpanded ? 14 : 8;
 
-                const BATCH_SIZE = 10;
-                const allUnitsArr = Object.values(units);
-                const rawBatches = [];
-                for (let i = 0; i < allUnitsArr.length; i += BATCH_SIZE) {
-                    const slice = allUnitsArr.slice(i, i + BATCH_SIZE);
-                    const p = slice.filter(u => u.status === 'COMPLETED').length;
-                    rawBatches.push(parseFloat(((p / slice.length) * 100).toFixed(1)));
-                }
+                // ── Group by REAL batch label (per production run) ──
+                const batchMap = new Map();
+                Object.values(units).forEach(u => {
+                    const label = u.batchLabel || u.serial.split('-')[0];
+                    if (!batchMap.has(label)) batchMap.set(label, { total: 0, passed: 0 });
+                    const b = batchMap.get(label);
+                    b.total++;
+                    if (u.status === 'COMPLETED') b.passed++;
+                });
 
-                // Fall back to demo data if < 2 real batches
                 const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
-                const useDemo = rawBatches.length < 2;
-                const allYields = useDemo ? DEMO : rawBatches; // ALL batches for stats
-                const batchYields = allYields.slice(-20); // Last 20 for display
-                const labels = batchYields.map((_, i) => useDemo
-                    ? `${10 + i * 5}:00`
-                    : `Batch ${allYields.length - batchYields.length + i + 1}`);
+                const useDemo = batchMap.size < 2;
+
+                let allYields, batchYields, labels;
+                if (useDemo) {
+                    allYields = DEMO;
+                    batchYields = DEMO;
+                    labels = DEMO.map((_, i) => `Demo ${i + 1}`);
+                } else {
+                    const entries = Array.from(batchMap.entries())
+                        .sort((a, b) => a[0].localeCompare(b[0]));
+                    allYields = entries.map(([, v]) => parseFloat(((v.passed / v.total) * 100).toFixed(1)));
+                    batchYields = allYields.slice(-20);
+                    const allKeys = entries.map(([k]) => k);
+                    labels = allKeys.slice(-20).map((k, i) => `Batch ${allYields.length - batchYields.length + i + 1}`);
+                }
 
                 // ── Shewhart Calculations (computed from FULL dataset for consistency) ──
                 const n = allYields.length;
