@@ -223,13 +223,14 @@ h3,
 
 /* 🧩 Component Specific Styles */
 .login-logo {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    border-radius: 20px;
-    filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.5)) drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
-    margin: 0 auto 1.75rem;
+    width: 140px;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 28px;
+    filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.6));
+    margin: 0 auto 2rem;
     display: block;
+    border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .login-title {
@@ -276,13 +277,41 @@ h3,
     font-weight: 700;
 }
 
-.sidebar-logo {
-    width: 44px;
-    height: 44px;
-    object-fit: contain;
-    border-radius: 10px;
+.sidebar-brand-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 2.5rem;
-    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.4));
+}
+
+.sidebar-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 12px;
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-main {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: white;
+    letter-spacing: 0.05em;
+    font-family: 'Outfit', sans-serif;
+}
+
+.brand-sub {
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.25em;
+    margin-top: -2px;
 }
 
 .user-profile-card {

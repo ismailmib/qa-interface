@@ -414,7 +414,7 @@ const templates = {
                              <span style="font-size: 0.65rem; font-weight: 800; color: var(--success);">LIVE STREAM ACTIVE</span>
                         </div>
                      </div>
-                     <div class="table-container" style="border:none; border-radius:0; max-height: 350px;">
+                     <div class="table-container" style="border:none; border-radius:0; max-height: 700px;">
                         <table>
                             <thead><tr><th>RECENT LOGS</th><th>STATION</th><th>EVENT</th><th>TIMESTAMP</th></tr></thead>
                             <tbody id="live-audit-stream">
@@ -2281,7 +2281,13 @@ function searchUnit() {
 }
 
 function renderHeritageView(unit) {
-    const resultArea = document.getElementById('trace-result-area');
+    let resultArea = document.getElementById('trace-result-area');
+
+    // 🔄 View Switcher: If we are on Dashboard/Analytics, jump to Traceability first
+    if (!resultArea) {
+        showTraceability();
+        resultArea = document.getElementById('trace-result-area');
+    }
 
     // ⚔️ MRB DECISION CONSOLE: Only shows for units requiring management signature
     let mrbConsole = '';
