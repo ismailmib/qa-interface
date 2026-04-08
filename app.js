@@ -2333,8 +2333,52 @@ function renderExecutiveCharts() {
             const trendCanvas = document.getElementById('monthly-trend-chart');
             if (trendCanvas) {
                 destroyIfExists('monthly-trend-chart');
+
+                // Unit counts for each legacy month (totalFG / inventoryPlan from legacyManualPerformance)
+                const legacyPlan = legacyManualPerformance.inventoryPlan; // 3000
+                const legacyUnitsPassed = legacyManualPerformance.months.map(m =>
+                    legacyManualPerformance.data[m].totalFG
+                ); // [2634, 2591, 2638, 2613, 2620, 2590]
+
+                // Digital current: derive from live yieldData
+                const digitalPassed = yieldData.passed.reduce((a, b) => a + b, 0);
+                const digitalTotal = yieldData.inspected.reduce((a, b) => a + b, 0);
+
+                // For tooltip: units per bar slot (7 slots: 6 legacy + 1 digital)
+                const unitCountsLegacy = [...legacyUnitsPassed, null];
+                const unitCountsDigital = [null, null, null, null, null, null, digitalPassed];
+                const totalPerSlot = [...Array(6).fill(legacyPlan), digitalTotal || legacyPlan];
+
+                // Inline bar-label plugin (draws text above each bar)
+                const barLabelPlugin = {
+                    id: 'barUnitLabel',
+                    afterDatasetsDraw(chart) {
+                        const { ctx, data } = chart;
+                        ctx.save();
+                        chart.data.datasets.forEach((dataset, dsIdx) => {
+                            const meta = chart.getDatasetMeta(dsIdx);
+                            meta.data.forEach((bar, i) => {
+                                const val = dataset.data[i];
+                                if (val === null || val === undefined) return;
+
+                                const units = dsIdx === 0 ? unitCountsLegacy[i] : unitCountsDigital[i];
+                                const total = totalPerSlot[i];
+                                if (units === null || units === undefined) return;
+
+                                const label = `${units.toLocaleString()} / ${total.toLocaleString()}`;
+                                ctx.fillStyle = dsIdx === 1 ? 'rgba(200,180,255,0.95)' : 'rgba(255,255,255,0.55)';
+                                ctx.font = 'bold 9px Inter, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(label, bar.x, bar.y - 6);
+                            });
+                        });
+                        ctx.restore();
+                    }
+                };
+
                 new Chart(trendCanvas, {
                     type: 'bar',
+                    plugins: [barLabelPlugin],
                     data: {
                         labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current"],
                         datasets: [{
@@ -2355,7 +2399,28 @@ function renderExecutiveCharts() {
                         responsive: true,
                         maintainAspectRatio: false,
                         animation: { duration: 700 },
-                        plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 } } } },
+                        layout: { padding: { top: 22 } }, // room for bar labels
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 } } },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label(ctx) {
+                                        const dsIdx = ctx.datasetIndex;
+                                        const i = ctx.dataIndex;
+                                        const yVal = ctx.parsed.y;
+                                        if (yVal === null) return null;
+                                        const units = dsIdx === 0 ? unitCountsLegacy[i] : unitCountsDigital[i];
+                                        const total = totalPerSlot[i];
+                                        const unitStr = (units !== null && units !== undefined)
+                                            ? `  •  ${units.toLocaleString()} / ${total.toLocaleString()} units passed`
+                                            : '';
+                                        return ` ${ctx.dataset.label}: ${yVal}%${unitStr}`;
+                                    }
+                                }
+                            }
+                        },
                         scales: {
                             y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' } },
                             x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
