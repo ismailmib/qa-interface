@@ -517,9 +517,14 @@ const templates = {
             </div>
 
             <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
-                <div class="card glass">
-                    <h3 class="section-title-sm">Statistical Process Control (SPC) — Batch Yield Window</h3>
-                    <div style="height:300px; margin-top:1.5rem; position: relative;" id="spc-container">
+                <div class="card glass" id="card-spc">
+                    <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
+                        <h3 class="section-title-sm" style="margin:0;">Statistical Process Control (SPC) — Batch Yield Window</h3>
+                        <button class="btn btn-icon" style="background:none; border:none; color:var(--text-muted); padding:0;" onclick="toggleExpandCard('card-spc', 'spc-container')">
+                            <i data-lucide="maximize-2" style="width:18px;"></i>
+                        </button>
+                    </div>
+                    <div style="height:300px; position: relative;" id="spc-container">
                         <canvas id="spc-yield-chart"></canvas>
                         <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
                     </div>
@@ -918,6 +923,35 @@ function setActiveNav(templateKey) {
         const el = document.getElementById(targetId);
         if (el) el.classList.add('active');
     }
+}
+
+function toggleExpandCard(cardId, containerId) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    if (card.classList.contains('card-expanded')) {
+        // MINIMIZE
+        card.classList.remove('card-expanded');
+        const overlay = document.querySelector('.card-expand-overlay');
+        if (overlay) overlay.remove();
+        if (containerId) document.getElementById(containerId).style.height = '300px';
+    } else {
+        // MAXIMIZE
+        const overlay = document.createElement('div');
+        overlay.className = 'card-expand-overlay';
+        overlay.onclick = () => toggleExpandCard(cardId, containerId); // Close on overlay click
+        document.body.appendChild(overlay);
+
+        card.classList.add('card-expanded');
+        if (containerId) document.getElementById(containerId).style.height = '70vh';
+    }
+
+    // Notify charts to resize
+    setTimeout(() => {
+        if (window.Chart) {
+            Object.values(Chart.instances).forEach(chart => chart.resize());
+        }
+    }, 450);
 }
 
 function render(templateKey, title, breadcrumb) {
