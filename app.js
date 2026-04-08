@@ -946,12 +946,15 @@ function toggleExpandCard(cardId, containerId) {
         if (containerId) document.getElementById(containerId).style.height = '70vh';
     }
 
-    // Notify charts to resize
+    // Notify charts to resize and re-render with higher-def settings
     setTimeout(() => {
+        if (templateCache.active === 'analytics' || templateCache.active === 'executiveAnalytics') {
+            renderExecutiveCharts();
+        }
         if (window.Chart) {
             Object.values(Chart.instances).forEach(chart => chart.resize());
         }
-    }, 450);
+    }, 100);
 }
 
 function render(templateKey, title, breadcrumb) {
@@ -2849,6 +2852,13 @@ function renderExecutiveCharts() {
             if (spcCanvas) {
                 destroyIfExists('spc-yield-chart');
 
+                const isExpanded = document.getElementById('card-spc')?.classList.contains('card-expanded') || false;
+                const fontSize = isExpanded ? 14 : 9;
+                const titleSize = isExpanded ? 16 : 10;
+                const lineWeight = isExpanded ? 4 : 2;
+                const dotSize = isExpanded ? 10 : 5;
+                const activeDotSize = isExpanded ? 14 : 8;
+
                 const BATCH_SIZE = 10;
                 const allUnitsArr = Object.values(units);
                 const rawBatches = [];
@@ -2894,12 +2904,13 @@ function renderExecutiveCharts() {
                             data: batchYields,
                             borderColor: '#10b981',
                             backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                            borderWidth: lineWeight,
                             tension: 0.4,
                             fill: true,
-                            pointRadius: pointRadii,
+                            pointRadius: batchYields.map(y => y < lcl ? activeDotSize : dotSize),
                             pointBackgroundColor: pointColors,
                             pointBorderColor: '#fff',
-                            pointBorderWidth: 2
+                            pointBorderWidth: isExpanded ? 3 : 2
                         }, {
                             label: `UCL (${ucl.toFixed(1)}%)`,
                             data: Array(n).fill(ucl),
@@ -2918,6 +2929,7 @@ function renderExecutiveCharts() {
                             label: `LCL (${lcl.toFixed(1)}%) — Below = OUT OF CONTROL`,
                             data: Array(n).fill(lcl),
                             borderColor: 'rgba(239,68,68,0.7)',
+                            borderWidth: isExpanded ? 4 : 2,
                             borderDash: [6, 4],
                             pointStyle: false,
                             fill: false
@@ -2928,7 +2940,15 @@ function renderExecutiveCharts() {
                         maintainAspectRatio: false,
                         animation: { duration: 700 },
                         plugins: {
-                            legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, boxWidth: 20 } },
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: 'rgba(255,255,255,0.7)',
+                                    font: { size: fontSize, weight: '700' },
+                                    boxWidth: isExpanded ? 30 : 20,
+                                    padding: isExpanded ? 20 : 10
+                                }
+                            },
                             tooltip: {
                                 mode: 'index',
                                 intersect: false,
@@ -2950,9 +2970,21 @@ function renderExecutiveCharts() {
                                 min: Math.max(70, lcl - 5),
                                 max: 100,
                                 grid: { color: 'rgba(255,255,255,0.05)' },
-                                ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' }
+                                ticks: {
+                                    color: 'rgba(255,255,255,0.4)',
+                                    callback: v => v + '%',
+                                    font: { size: fontSize, weight: '700' }
+                                },
+                                title: { display: isExpanded, text: 'BATCH YIELD %', color: 'rgba(255,255,255,0.3)', font: { size: titleSize, weight: '800' }, padding: 10 }
                             },
-                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    color: 'rgba(255,255,255,0.4)',
+                                    font: { size: fontSize, weight: '700' }
+                                },
+                                title: { display: isExpanded, text: 'PRODUCTION BATCH TIMELINE', color: 'rgba(255,255,255,0.3)', font: { size: titleSize, weight: '800' }, padding: 10 }
+                            }
                         }
                     }
                 });
