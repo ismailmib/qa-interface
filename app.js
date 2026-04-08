@@ -1668,7 +1668,6 @@ function confirmFinalScrap(sn) {
 }
 
 // 👑 Admin Management
-function showAnalytics() { render('analytics', 'Analytics Dashboard', 'Performance'); }
 function showTraceability() { render('traceability', 'Traceability Search', 'History'); }
 function showStageManagement() { render('stageManagement', 'Workflow Setup', 'Stages'); }
 
@@ -2229,23 +2228,29 @@ function goToMRB() {
 }
 
 function renderExecutiveCharts() {
-    console.log("📊 Chart System: Booting Executive Visuals...");
+    console.log('📊 Chart Engine: Booting...');
 
-    // ⚡ Resilience Delay: Ensure canvas is in DOM
     setTimeout(() => {
         try {
             if (typeof Chart === 'undefined') {
-                showToast("Chart Engine missing. Refreshing library connection...", "warning");
+                showToast('Chart.js not loaded — check internet connection.', 'error');
                 return;
             }
 
-            // Remove loaders
+            // ✅ Helper: destroy stale instance to prevent "canvas already in use" crash
+            const destroyIfExists = (id) => {
+                const existing = Chart.getChart(id);
+                if (existing) { existing.destroy(); }
+            };
+
+            // Hide loader placeholders
             document.querySelectorAll('.chart-loader').forEach(l => l.style.display = 'none');
 
             // 1. SPC Chart
-            const spcCtx = document.getElementById('spc-yield-chart');
-            if (spcCtx) {
-                new Chart(spcCtx, {
+            const spcCanvas = document.getElementById('spc-yield-chart');
+            if (spcCanvas) {
+                destroyIfExists('spc-yield-chart');
+                new Chart(spcCanvas, {
                     type: 'line',
                     data: {
                         labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15'],
@@ -2256,13 +2261,15 @@ function renderExecutiveCharts() {
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 4,
-                            pointBackgroundColor: '#10b981'
+                            pointRadius: 5,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
                         }, {
-                            label: 'LCL (Warning)',
+                            label: 'LCL — Warning Threshold (92%)',
                             data: Array(10).fill(92.0),
-                            borderColor: 'rgba(239, 68, 68, 0.4)',
-                            borderDash: [5, 5],
+                            borderColor: 'rgba(239,68,68,0.6)',
+                            borderDash: [6, 4],
                             pointStyle: false,
                             fill: false
                         }]
@@ -2270,51 +2277,65 @@ function renderExecutiveCharts() {
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
+                        animation: { duration: 700 },
+                        plugins: {
+                            legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } } },
+                            tooltip: { mode: 'index', intersect: false }
+                        },
                         scales: {
-                            y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                            y: { min: 85, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' } },
                             x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
                         }
                     }
                 });
-                console.log("✅ SPC Chart Rendered.");
+                console.log('✅ SPC Chart rendered.');
+            } else {
+                console.warn('⚠️ #spc-yield-chart canvas not found in DOM.');
             }
 
-            // 2. Monthly Trend Chart
-            const trendCtx = document.getElementById('monthly-trend-chart');
-            if (trendCtx) {
-                new Chart(trendCtx, {
+            // 2. 6-Month Trend Chart
+            const trendCanvas = document.getElementById('monthly-trend-chart');
+            if (trendCanvas) {
+                destroyIfExists('monthly-trend-chart');
+                new Chart(trendCanvas, {
                     type: 'bar',
                     data: {
-                        labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current (Digital)"],
+                        labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current"],
                         datasets: [{
                             label: 'Legacy Manual Yield %',
                             data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
-                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: 4
+                            backgroundColor: 'rgba(255,255,255,0.07)',
+                            borderColor: 'rgba(255,255,255,0.15)',
+                            borderWidth: 1,
+                            borderRadius: 6
                         }, {
                             label: 'Digital System Yield %',
                             data: [null, null, null, null, null, null, 98.8],
-                            backgroundColor: '#8b5cf6',
-                            borderRadius: 4
+                            backgroundColor: 'rgba(139,92,246,0.85)',
+                            borderRadius: 6
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { size: 10 } } } },
+                        animation: { duration: 700 },
+                        plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 } } } },
                         scales: {
-                            y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                            y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' } },
                             x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
                         }
                     }
                 });
-                console.log("✅ Trend Chart Rendered.");
+                console.log('✅ Trend Chart rendered.');
+            } else {
+                console.warn('⚠️ #monthly-trend-chart canvas not found in DOM.');
             }
+
         } catch (err) {
-            console.error("❌ Chart Execution Error:", err);
+            console.error('❌ Chart render error:', err.message);
+            showToast('Chart render failed: ' + err.message, 'error');
         }
-    }, 150);
+    }, 200);
 
     // 3. Bottleneck Analysis Logic (Immediate)
     const list = document.getElementById('bottleneck-action-list');
