@@ -435,11 +435,39 @@ const templates = {
                         </div>
                     </div>
                     
-                    <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--accent)); border:none; text-align:center; padding: 1.5rem;">
-                         <i data-lucide="zap" style="width: 24px; height: 24px; color: white; margin: 0 auto 0.75rem;"></i>
-                         <h4 style="color: white; font-weight: 800; font-size: 0.9rem;">Broadcast Alert</h4>
-                         <p style="color: rgba(255,255,255,0.8); font-size: 0.65rem; margin-bottom: 1rem;">Send production memo to all stations.</p>
-                         <button class="btn btn-outline" style="background: white; color: var(--primary); width: 100%; justify-content: center; border:none; font-weight: 800; font-size: 0.7rem;">Open Intercom</button>
+                    <div class="card glass" style="border-top: 3px solid var(--primary); padding: 1.25rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h4 style="font-size:0.65rem; font-weight:900; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin:0;">Current Shift Summary</h4>
+                            <div class="status-dot-pulse"></div>
+                        </div>
+                        <div class="flex flex-col" style="gap:0.55rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Shift Started</span>
+                                <span id="shift-started-val" style="font-size:0.72rem; font-weight:800;">--</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Duration</span>
+                                <span id="shift-duration-val" style="font-size:0.72rem; font-weight:800; color:var(--primary);">--</span>
+                            </div>
+                            <div style="border-top:1px solid var(--border); margin:0.2rem 0;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Batches Run</span>
+                                <span id="shift-batches-val" style="font-size:0.72rem; font-weight:800;">--</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Total Units</span>
+                                <span id="shift-units-val" style="font-size:0.72rem; font-weight:800;">--</span>
+                            </div>
+                            <div style="border-top:1px solid var(--border); margin:0.2rem 0;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Avg FPY</span>
+                                <span id="shift-fpy-card-val" style="font-size:0.72rem; font-weight:900;">--</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">MRB Pending</span>
+                                <span id="shift-mrb-card-val" style="font-size:0.72rem; font-weight:900;">--</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1349,9 +1377,68 @@ function updateAdminGauges() {
     const fill = document.getElementById('shift-progress-fill');
     if (fill) fill.style.width = `${Math.min(passPercent, 100)}%`;
 
-    // MRB Inbox
-    const mrbEl = document.getElementById('total-mrb-count');
-    if (mrbEl) mrbEl.textContent = mrbCount;
+    // MRB Inbox counter
+    const mrbInboxEl = document.getElementById('total-mrb-count');
+    if (mrbInboxEl) mrbInboxEl.textContent = mrbCount;
+
+    // Live Shift Summary card
+    updateShiftSummaryCard();
+}
+
+function updateShiftSummaryCard() {
+    const allUnits = Object.values(units);
+    if (allUnits.length === 0) return;
+
+    const total = allUnits.length;
+    const passed = allUnits.filter(u => u.status === 'COMPLETED').length;
+    const mrb = allUnits.filter(u => u.status === 'MRB_REVIEW').length;
+    const fpy = ((passed / total) * 100).toFixed(1);
+
+    // ── Count unique batches (B{HHMMSS} prefix) ─────────────────────────
+    const batchKeys = new Set();
+    allUnits.forEach(u => { const m = u.serial.match(/^(B\d{6})/); if (m) batchKeys.add(m[1]); });
+
+    // ── Shift start: read from earliest batch key's stored history time ─
+    const sortedBatches = [...batchKeys].sort(); // BHHMMSS sort = chronological
+    const firstBatch = sortedBatches[0];
+    let startTimeStr = 'No data';
+    let durationStr = '--';
+
+    if (firstBatch) {
+        // Use the actual locale time string stored in the first unit of this batch
+        const firstUnit = allUnits.find(u => u.serial.startsWith(firstBatch));
+        startTimeStr = firstUnit?.history?.[0]?.time || '--';
+
+        // Duration: parse HHMMSS from batch key vs now
+        const h = parseInt(firstBatch.slice(1, 3));
+        const mi = parseInt(firstBatch.slice(3, 5));
+        const s = parseInt(firstBatch.slice(5, 7));
+        const now = new Date();
+        const startMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s).getTime();
+        const diffMs = now.getTime() - startMs;
+        if (diffMs >= 0) {
+            const mm = Math.floor(diffMs / 60000);
+            const ss = Math.floor((diffMs % 60000) / 1000);
+            durationStr = mm > 0 ? `${mm}m ${ss}s` : `${ss}s`;
+        }
+    }
+
+    // ── Update DOM ───────────────────────────────────────────────────────
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('shift-started-val', startTimeStr);
+    set('shift-duration-val', durationStr);
+    set('shift-batches-val', batchKeys.size > 0 ? `${batchKeys.size} batch${batchKeys.size > 1 ? 'es' : ''}` : '--');
+    set('shift-units-val', total);
+    set('shift-fpy-card-val', fpy + '%');
+    set('shift-mrb-card-val', mrb > 0 ? mrb + ' units' : '✅ Clear');
+
+    // Colour-code FPY
+    const fpyEl = document.getElementById('shift-fpy-card-val');
+    if (fpyEl) fpyEl.style.color = parseFloat(fpy) >= 98.5 ? 'var(--success)' : parseFloat(fpy) >= 92 ? 'var(--warning)' : 'var(--error)';
+
+    // Colour-code MRB
+    const mrbEl = document.getElementById('shift-mrb-card-val');
+    if (mrbEl) mrbEl.style.color = mrb === 0 ? 'var(--success)' : mrb < 5 ? 'var(--warning)' : 'var(--error)';
 }
 
 function updateStageHeatmap(containerId) {
