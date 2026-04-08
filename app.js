@@ -758,11 +758,30 @@ function handleLogin() {
         return;
     }
 
-    const user = usersData.find(u =>
+    // Check in-memory usersData first
+    let user = usersData.find(u =>
         u.accessId.toLowerCase().trim() === normalizedID &&
         u.pass.trim() === normalizedPass &&
         u.role === roleReq
     );
+
+    // ✅ FALLBACK: If not found in memory, read directly from localStorage
+    // This handles incognito tabs or cases where cloud sync hasn't loaded yet
+    if (!user) {
+        try {
+            const localRaw = localStorage.getItem('usersData');
+            if (localRaw) {
+                const localUsers = JSON.parse(localRaw);
+                user = localUsers.find(u =>
+                    u.accessId.toLowerCase().trim() === normalizedID &&
+                    u.pass.trim() === normalizedPass &&
+                    u.role === roleReq
+                );
+                // Merge into memory so rest of session works
+                if (user) usersData = localUsers;
+            }
+        } catch (_) { /* ignore parse errors */ }
+    }
 
     if (!user) {
         showToast("Access Denied: Invalid credentials or role mismatch.", "error");
@@ -2237,10 +2256,14 @@ function renderExecutiveCharts() {
                 return;
             }
 
-            // ✅ Helper: destroy stale instance to prevent "canvas already in use" crash
+            // ✅ Safe destroy wrapper — works across all Chart.js v3+ builds
             const destroyIfExists = (id) => {
-                const existing = Chart.getChart(id);
-                if (existing) { existing.destroy(); }
+                try {
+                    if (typeof Chart.getChart === 'function') {
+                        const existing = Chart.getChart(id);
+                        if (existing) existing.destroy();
+                    }
+                } catch (_) { /* safe to ignore */ }
             };
 
             // Hide loader placeholders
