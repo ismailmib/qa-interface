@@ -996,9 +996,9 @@ function render(templateKey, title, breadcrumb) {
                 <!-- Batch size selector -->
                 <div id="sim-batch-selector" style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; padding:3px 6px;">
                     <span style="font-size:0.6rem; color:var(--text-muted); font-weight:800; margin-right:4px;">BATCH</span>
-                    <button onclick="simBatchSize=50;  document.querySelectorAll('.sim-sz-btn').forEach(b=>b.classList.remove('active-sz')); this.classList.add('active-sz');" class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:5px;cursor:pointer;">50</button>
-                    <button onclick="simBatchSize=100; document.querySelectorAll('.sim-sz-btn').forEach(b=>b.classList.remove('active-sz')); this.classList.add('active-sz');" class="sim-sz-btn active-sz" style="background:var(--primary);border:none;color:#fff;font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:5px;cursor:pointer;">100</button>
-                    <button onclick="simBatchSize=200; document.querySelectorAll('.sim-sz-btn').forEach(b=>b.classList.remove('active-sz')); this.classList.add('active-sz');" class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:5px;cursor:pointer;">200</button>
+                    <button data-sz="50"  onclick="selectSimBatchSize(50)"  class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all 0.15s;">50</button>
+                    <button data-sz="100" onclick="selectSimBatchSize(100)" class="sim-sz-btn" style="background:var(--primary);border:none;color:#fff;font-size:0.7rem;font-weight:800;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all 0.15s;">100</button>
+                    <button data-sz="200" onclick="selectSimBatchSize(200)" class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all 0.15s;">200</button>
                 </div>
 
                 <!-- Start button (IDLE state) -->
@@ -1065,48 +1065,26 @@ function render(templateKey, title, breadcrumb) {
 }
 
 // ── Simulation Control Helpers ───────────────────────────────────────────────
-function toggleSimPause() {
-    simPaused = !simPaused;
-    const btn = document.getElementById('sim-pause-btn');
-    const lbl = document.getElementById('sim-progress-label');
-    const nextBtn = document.getElementById('sim-next-btn');
-    if (simPaused) {
-        if (btn) btn.innerHTML = '<i data-lucide="play-circle" style="width:15px;"></i> Resume';
-        if (btn) btn.style.borderColor = 'var(--success)';
-        if (btn) btn.style.color = 'var(--success)';
-        if (nextBtn) nextBtn.style.display = 'flex';
-        if (lbl) lbl.textContent = '⏸ PAUSED';
-        showToast('⏸ Simulation paused. Click Resume to continue.', 'warning');
-    } else {
-        if (btn) btn.innerHTML = '<i data-lucide="pause-circle" style="width:15px;"></i> Pause';
-        if (btn) btn.style.borderColor = '';
-        if (btn) btn.style.color = '';
-        if (nextBtn) nextBtn.style.display = 'none';
-        showToast('▶️ Simulation resumed.', 'success');
-    }
-    lucide.createIcons();
+
+/** Highlight the selected batch-size button */
+function selectSimBatchSize(sz) {
+    simBatchSize = sz;
+    document.querySelectorAll('.sim-sz-btn').forEach(b => {
+        const active = parseInt(b.dataset.sz) === sz;
+        b.style.background = active ? 'var(--primary)' : 'none';
+        b.style.color = active ? '#fff' : 'var(--text-muted)';
+    });
 }
 
-function abortSim() {
-    if (!confirm('Abort the current simulation run? Progress so far will be saved.')) return;
-    simStopped = true;
-    simPaused = false;
-    showToast('🛑 Simulation aborted. Processed units have been saved.', 'error');
-}
-
-function queueNextBatch() {
-    simQueueNext = true;
-    simPaused = false; // auto-resume if paused
-    showToast('⏭ Next batch queued — will start when current batch completes.', 'info');
-    const nextBtn = document.getElementById('sim-next-btn');
-    if (nextBtn) { nextBtn.disabled = true; nextBtn.innerHTML = '<i data-lucide="loader" style="width:15px;"></i> Queued'; lucide.createIcons(); }
-    // If we're paused, un-pause immediately so it completes and triggers next
-    const pauseBtn = document.getElementById('sim-pause-btn');
-    if (pauseBtn && pauseBtn.innerHTML.includes('Resume')) toggleSimPause();
-}
-
-function setSimControlState(state) {
-    // state: 'idle' | 'running' | 'paused' | 'done'
+/**
+ * Single source of truth for button visibility.
+ * States:
+ *   'idle'   → batch selector on, [Simulate] visible, rest hidden
+ *   'running'→ [Pause] + [Abort] visible, progress showing
+ *   'paused' → [Resume] + [Next Batch] + [Abort] visible, progress shows PAUSED
+ *   'done'   → back to idle appearance, Simulate re-enabled
+ */
+function setSimControlState(state, progressText) {
     const startBtn = document.getElementById('sim-trigger-btn');
     const pauseBtn = document.getElementById('sim-pause-btn');
     const stopBtn = document.getElementById('sim-stop-btn');
@@ -1115,24 +1093,108 @@ function setSimControlState(state) {
     const lbl = document.getElementById('sim-progress-label');
     if (!startBtn) return;
 
-    if (state === 'running') {
-        startBtn.style.display = 'none';
-        if (sizeBar) sizeBar.style.opacity = '0.4';
-        if (pauseBtn) pauseBtn.style.display = 'flex';
-        if (stopBtn) stopBtn.style.display = 'flex';
-        if (nextBtn) nextBtn.style.display = 'none';
-        if (lbl) lbl.style.display = 'block';
-    } else if (state === 'done') {
-        startBtn.style.display = 'flex';
+    // Helper: show/hide
+    const show = el => { if (el) el.style.display = 'flex'; };
+    const hide = el => { if (el) el.style.display = 'none'; };
+    const txt = el => { if (el) el.style.display = 'block'; };
+
+    if (state === 'idle' || state === 'done') {
+        show(startBtn);
         startBtn.disabled = false;
         const total = Object.keys(units).length;
-        startBtn.innerHTML = `<i data-lucide="play-circle" style="width:15px;"></i> Simulate Shift <span style="font-size:0.65rem;opacity:0.6;">(${total} total)</span>`;
+        startBtn.innerHTML = total > 0
+            ? `<i data-lucide="play-circle" style="width:15px;"></i> Simulate Shift <span style="font-size:0.65rem;opacity:0.5;">(${total} processed)</span>`
+            : `<i data-lucide="play-circle" style="width:15px;"></i> Simulate Shift`;
         if (sizeBar) sizeBar.style.opacity = '1';
-        if (pauseBtn) pauseBtn.style.display = 'none';
-        if (stopBtn) stopBtn.style.display = 'none';
-        if (nextBtn) nextBtn.style.display = 'none';
-        if (lbl) lbl.style.display = 'none';
+        hide(pauseBtn);
+        hide(stopBtn);
+        hide(nextBtn);
+        hide(lbl);
+        // Reset pause button back to "Pause" for next run
+        if (pauseBtn) {
+            pauseBtn.innerHTML = '<i data-lucide="pause-circle" style="width:15px;"></i> Pause';
+            pauseBtn.style.borderColor = '';
+            pauseBtn.style.color = '';
+        }
         lucide.createIcons();
+
+    } else if (state === 'running') {
+        hide(startBtn);
+        if (sizeBar) sizeBar.style.opacity = '0.4';
+        // Pause button: show as "Pause"
+        if (pauseBtn) {
+            pauseBtn.innerHTML = '<i data-lucide="pause-circle" style="width:15px;"></i> Pause';
+            pauseBtn.style.borderColor = '';
+            pauseBtn.style.color = '';
+        }
+        show(pauseBtn);
+        show(stopBtn);
+        hide(nextBtn);
+        txt(lbl);
+        if (lbl && progressText) lbl.textContent = progressText;
+        lucide.createIcons();
+
+    } else if (state === 'paused') {
+        hide(startBtn);
+        if (sizeBar) sizeBar.style.opacity = '0.4';
+        // Pause button becomes "Resume"
+        if (pauseBtn) {
+            pauseBtn.innerHTML = '<i data-lucide="play-circle" style="width:15px;"></i> Resume';
+            pauseBtn.style.borderColor = 'var(--success)';
+            pauseBtn.style.color = 'var(--success)';
+        }
+        show(pauseBtn);
+        show(stopBtn);
+        // Reset Next Batch button
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = '<i data-lucide="skip-forward" style="width:15px;"></i> Next Batch';
+        }
+        show(nextBtn);
+        txt(lbl);
+        if (lbl) lbl.textContent = '⏸ PAUSED — ' + (progressText || '');
+        lucide.createIcons();
+    }
+}
+
+function toggleSimPause() {
+    simPaused = !simPaused;
+    if (simPaused) {
+        // Get current progress from label for display
+        const lbl = document.getElementById('sim-progress-label');
+        const cur = lbl ? lbl.textContent.replace('⏸ PAUSED — ', '') : '';
+        setSimControlState('paused', cur);
+        showToast('⏸ Paused. Click Resume to continue or Next Batch to queue another.', 'warning');
+    } else {
+        setSimControlState('running');
+        showToast('▶️ Resumed.', 'success');
+    }
+}
+
+function abortSim() {
+    if (!confirm('Abort this run? All units processed so far will be saved.')) return;
+    simStopped = true;
+    simPaused = false;  // unblock the while-loop so it can see simStopped
+    setSimControlState('done'); // immediately reset to IDLE — no Resume, no Next Batch
+    showToast('🛑 Run aborted. Processed units saved.', 'error');
+}
+
+function queueNextBatch() {
+    simQueueNext = true;
+    // Disable the Next Batch button to prevent double-clicks
+    const nextBtn = document.getElementById('sim-next-btn');
+    if (nextBtn) {
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<i data-lucide="loader" style="width:15px;"></i> Queued…';
+        lucide.createIcons();
+    }
+    // Auto-resume so the current batch finishes and triggers the next one
+    if (simPaused) {
+        simPaused = false;
+        setSimControlState('running');
+        showToast('⏭ Next batch queued — resuming current run…', 'info');
+    } else {
+        showToast('⏭ Next batch queued — will auto-start when current completes.', 'info');
     }
 }
 
