@@ -206,6 +206,18 @@ async function initSystemCloudSync() {
     }
 
     try {
+        // 🔬 FIREBASE DIAGNOSTIC: Test actual read before subscribing
+        // This catches expired/blocked security rules immediately
+        try {
+            await db.collection('sys').doc('users').get();
+            console.log('✅ Firebase read test: SUCCESS');
+        } catch (testErr) {
+            console.error('❌ Firebase read BLOCKED:', testErr.code, testErr.message);
+            updateCloudStatus(false, 'RULES BLOCKED — FIX FIREBASE');
+            showToast('⚠️ Firebase access denied. Check Firestore Security Rules in Firebase Console.', 'error', 8000);
+            return; // Fall through to local-only mode
+        }
+
         const collections = ['users', 'stages', 'analytics', 'ledger', 'audit'];
         for (const col of collections) {
             // 🛰️ REAL-TIME CLOUD HANDSHAKE (onSnapshot)
