@@ -3079,32 +3079,86 @@ function renderExecutiveCharts() {
     }, 200);
 
 
-    // 3. Bottleneck Analysis Logic (Immediate)
+    // 3. Critical Management Actions — Live Bottleneck Detection
+    //    Reads per-stage pass/fail counts from the actual units object.
+    //    Flags any stage whose live FPY drops below 92% benchmark.
     const list = document.getElementById('bottleneck-action-list');
     if (list) {
-        const bottlenecks = manufacturingStages.filter(s => {
-            const data = yieldData[s.id] || { ins: 0, pass: 0 };
-            const yieldVal = data.ins === 0 ? 100 : (data.pass / data.ins * 100);
-            return yieldVal < 92;
+        const allUnits = Object.values(units);
+
+        // Build per-stage pass/fail counts from unit history (same method as heatmap)
+        const stageStats = {};
+        manufacturingStages.forEach(s => {
+            stageStats[s.name] = { passes: 0, fails: 0, name: s.name, order: s.order };
         });
 
-        if (bottlenecks.length === 0) {
-            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;"><i data-lucide="check-circle-2" style="width:32px; height:32px; color:var(--success); margin: 0 auto 0.5rem; opacity:0.5;"></i><p class="text-muted" style="font-size:0.7rem;">All stations performing within safety benchmarks.</p></div>`;
+        allUnits.forEach(u => {
+            u.history.forEach(h => {
+                if (stageStats[h.stage]) {
+                    if (h.status === 'PASS') stageStats[h.stage].passes++;
+                    else if (h.status === 'UNIT_REJECTED') stageStats[h.stage].fails++;
+                }
+            });
+        });
+
+        // Find stages below 92% benchmark (only if they have actual data)
+        const bottlenecks = Object.values(stageStats)
+            .filter(s => {
+                const total = s.passes + s.fails;
+                if (total === 0) return false; // skip stages with no data yet
+                const fpy = (s.passes / total) * 100;
+                return fpy < 92;
+            })
+            .sort((a, b) => {
+                // Sort by FPY ascending (worst stage first)
+                const fpyA = a.passes / (a.passes + a.fails);
+                const fpyB = b.passes / (b.passes + b.fails);
+                return fpyA - fpyB;
+            });
+
+        if (allUnits.length === 0) {
+            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+                <i data-lucide="activity" style="width:28px; height:28px; color:var(--text-muted); margin: 0 auto 0.5rem; display:block; opacity:0.4;"></i>
+                <p class="text-muted" style="font-size:0.7rem;">No production data yet. Run a simulation to see live bottleneck alerts.</p>
+            </div>`;
+        } else if (bottlenecks.length === 0) {
+            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+                <i data-lucide="check-circle-2" style="width:32px; height:32px; color:var(--success); margin: 0 auto 0.5rem; display:block; opacity:0.5;"></i>
+                <p class="text-muted" style="font-size:0.7rem;">All stations performing within safety benchmarks (≥ 92%).</p>
+            </div>`;
             lucide.createIcons();
         } else {
             list.innerHTML = bottlenecks.map(s => {
-                const data = yieldData[s.id];
-                const yieldVal = (data.pass / data.ins * 100).toFixed(1);
+                const total = s.passes + s.fails;
+                const fpy = ((s.passes / total) * 100).toFixed(1);
+                const gap = (92 - parseFloat(fpy)).toFixed(1);
+                const color = parseFloat(fpy) < 80 ? 'var(--error)' : 'var(--warning)';
                 return `
-                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius:12px; padding: 1rem; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <div style="font-weight:800; font-size:0.85rem; color:var(--error); margin-bottom:0.2rem;">${s.name}</div>
-                            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">⚠️ ${data.ins - data.pass} REJECTIONS</div>
+                    <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2);
+                                border-radius:12px; padding:1rem;
+                                display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                        <div style="flex:1;">
+                            <div style="font-weight:800; font-size:0.82rem; color:${color}; margin-bottom:0.2rem;">
+                                ${s.name}
+                            </div>
+                            <div style="font-size:0.62rem; color:var(--text-muted); font-weight:600;">
+                                ⚠️ ${s.fails} rejections &nbsp;|&nbsp; ${gap}% below 92% target
+                            </div>
+                            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:6px; overflow:hidden;">
+                                <div style="width:${fpy}%; height:100%; background:${color}; border-radius:2px;"></div>
+                            </div>
                         </div>
-                        <div style="text-align:right;"><div style="font-size: 1.25rem; font-weight: 900; color: var(--error);">${yieldVal}%</div></div>
+                        <div style="text-align:right; min-width:60px;">
+                            <div style="font-size:1.25rem; font-weight:900; color:${color};">${fpy}%</div>
+                            <button class="btn btn-outline" style="font-size:0.55rem; padding:3px 8px; margin-top:4px; border-color:${color}; color:${color};"
+                                onclick="showToast('🔧 Work Order raised for ${s.name}. Station supervisor notified.', 'warning', 4000)">
+                                Raise Work Order
+                            </button>
+                        </div>
                     </div>`;
             }).join('');
         }
+        lucide.createIcons();
     }
 }
 
