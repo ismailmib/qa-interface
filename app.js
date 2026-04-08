@@ -137,8 +137,9 @@ let simPaused = false;  // true = loop is frozen mid-run
 let simStopped = false;  // true = loop should abort after current unit
 let simQueueNext = false; // true = queue another batch after current completes
 let simBatchSize = 100;  // default batch size
-let currentView = '';   // 📍 Tracks the currently active page/template
+let currentView = '';       // 📍 Tracks the currently active page/template
 let analyticsLiveInterval = null; // 🔄 Polling interval for live analytics refresh
+let ledgerWriteLock = false; // 🔒 Prevents snapshot from overwriting freshly-simulated units
 
 async function persistUsers() {
     localStorage.setItem('usersData', JSON.stringify(usersData));
@@ -163,8 +164,15 @@ async function persistYieldData() {
 }
 
 async function persistUnits() {
-    localStorage.setItem('units', JSON.stringify(units));
-    if (cloudActive) await db.collection('sys').doc('ledger').set({ data: units });
+    localStorage.setItem('units', JSON.stringify(units)); // always save locally first
+    if (cloudActive) {
+        ledgerWriteLock = true; // 🔒 prevent snapshot from overwriting our fresh write
+        try {
+            await db.collection('sys').doc('ledger').set({ data: units });
+        } finally {
+            setTimeout(() => { ledgerWriteLock = false; }, 3000); // 3s: longer than snapshot round-trip
+        }
+    }
 }
 
 async function pushAudit(event, details) {
@@ -263,9 +271,9 @@ async function initSystemCloudSync() {
                             usersData = merged;
                         }
                     }
-                    if (col === 'stages') manufacturingStages = cloudData;
+                    // 🔒 LEDGER: respect write-lock — don't overwrite fresh simulation data
+                    if (col === 'ledger' && !ledgerWriteLock) units = cloudData;
                     if (col === 'analytics') yieldData = cloudData;
-                    if (col === 'ledger') units = cloudData;
                     if (col === 'audit') globalAuditLog = cloudData;
 
                     // Live UI Refreshes (If on correct view)
@@ -1702,6 +1710,13 @@ async function generateMockShiftData(batchSz) {
         }
 
         units[sn] = unit;
+
+        // 💾 INCREMENTAL CHECKPOINT: save to localStorage every 10 units
+        // This ensures data is safe even if the page is refreshed mid-simulation
+        if ((idx + 1) % 10 === 0) {
+            localStorage.setItem('units', JSON.stringify(units));
+            localStorage.setItem('yieldData', JSON.stringify(yieldData));
+        }
 
         if (yieldData.inspected.length > 0) {
             const lastIdx = yieldData.inspected.length - 1;
