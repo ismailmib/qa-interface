@@ -529,11 +529,22 @@ const templates = {
                 </div>
             </div>
 
-            <div class="card glass" style="margin-top: 2rem;">
-                <h3 class="section-title-sm">6-Month Production Transformation (Legacy vs Digital)</h3>
-                <div style="height:250px; margin-top:1.5rem; position: relative;" id="trend-container">
-                    <canvas id="monthly-trend-chart"></canvas>
-                    <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; margin-top: 2rem;">
+                <div class="card glass">
+                    <h3 class="section-title-sm">6-Month Production Transformation (Legacy vs Digital)</h3>
+                    <div style="height:250px; margin-top:1.5rem; position: relative;" id="trend-container">
+                        <canvas id="monthly-trend-chart"></canvas>
+                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
+                    </div>
+                </div>
+
+                <div class="card glass">
+                    <h3 class="section-title-sm">📋 Defect Pareto — Rejections by Stage</h3>
+                    <p class="text-muted" style="font-size:0.65rem; margin-bottom: 0.5rem;">Ranked by total MRB rejections. Top bar = biggest bottleneck.</p>
+                    <div style="height:250px; margin-top:0.5rem; position: relative;" id="pareto-container">
+                        <canvas id="pareto-chart"></canvas>
+                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">COMPUTING...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2966,11 +2977,107 @@ function renderExecutiveCharts() {
                 console.warn('⚠️ #monthly-trend-chart canvas not found in DOM.');
             }
 
+            // 3. Defect Pareto Chart — Rejections by Stage
+            // ─────────────────────────────────────────────────────────────
+            // HOW IT WORKS:
+            //   • Scans all MRB_REVIEW units and counts how many failed at each stage
+            //     (using unit.scrapStageName stored during simulation)
+            //   • Sorts stages descending: stage with most rejections shown first
+            //   • A green cumulative % line shows where 80% of rejections come from
+            //   • Managers immediately see the single biggest bottleneck to fix
+            // ─────────────────────────────────────────────────────────────
+            const paretoCanvas = document.getElementById('pareto-chart');
+            if (paretoCanvas) {
+                destroyIfExists('pareto-chart');
+
+                // Build rejection count per stage name
+                const rejMap = {};
+                Object.values(units).forEach(u => {
+                    if (u.status === 'MRB_REVIEW' && u.scrapStageName) {
+                        rejMap[u.scrapStageName] = (rejMap[u.scrapStageName] || 0) + 1;
+                    }
+                });
+
+                // Fallback: if no real data yet, show demo
+                const hasRealData = Object.keys(rejMap).length > 0;
+                const stageNames = hasRealData
+                    ? Object.entries(rejMap).sort((a, b) => b[1] - a[1]).map(e => e[0])
+                    : manufacturingStages.map(s => s.name);
+                const rejCounts = hasRealData
+                    ? Object.entries(rejMap).sort((a, b) => b[1] - a[1]).map(e => e[1])
+                    : [12, 9, 6, 4, 2, 1]; // demo
+
+                // Cumulative % line
+                const totalRej = rejCounts.reduce((a, b) => a + b, 0);
+                let cumSum = 0;
+                const cumPct = rejCounts.map(v => { cumSum += v; return parseFloat(((cumSum / totalRej) * 100).toFixed(1)); });
+
+                // Bar colours: red → orange gradient by rank
+                const barColors = rejCounts.map((_, i) => {
+                    const ratio = i / Math.max(rejCounts.length - 1, 1);
+                    const r = Math.round(239 - ratio * 60);
+                    const g = Math.round(68 + ratio * 100);
+                    return `rgba(${r},${g},68,0.85)`;
+                });
+
+                new Chart(paretoCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: stageNames,
+                        datasets: [{
+                            label: 'Rejections',
+                            data: rejCounts,
+                            backgroundColor: barColors,
+                            borderRadius: 6,
+                            order: 2,
+                            yAxisID: 'yLeft'
+                        }, {
+                            label: 'Cumulative %',
+                            data: cumPct,
+                            type: 'line',
+                            borderColor: 'rgba(16,185,129,0.9)',
+                            backgroundColor: 'transparent',
+                            pointBackgroundColor: '#10b981',
+                            pointRadius: 4,
+                            tension: 0.3,
+                            order: 1,
+                            yAxisID: 'yRight'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 700 },
+                        plugins: {
+                            legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, boxWidth: 18 } },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel(ctx) {
+                                        if (ctx.datasetIndex === 0) {
+                                            const pct = ((ctx.parsed.y / totalRej) * 100).toFixed(1);
+                                            return `${pct}% of all rejections`;
+                                        }
+                                        return `${ctx.parsed.y}% cumulative`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            yLeft: { position: 'left', title: { display: true, text: 'Rejections', color: 'rgba(255,255,255,0.3)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.4)', stepSize: 1 } },
+                            yRight: { position: 'right', title: { display: true, text: 'Cumulative %', color: 'rgba(255,255,255,0.3)', font: { size: 9 } }, min: 0, max: 100, grid: { display: false }, ticks: { color: 'rgba(16,185,129,0.6)', callback: v => v + '%' } },
+                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } } }
+                        }
+                    }
+                });
+                console.log(`✅ Pareto Chart: ${stageNames.length} stages | Total rejections: ${totalRej}${!hasRealData ? ' (demo data)' : ''}`);
+            }
+
         } catch (err) {
             console.error('❌ Chart render error:', err.message);
             showToast('Chart render failed: ' + err.message, 'error');
         }
     }, 200);
+
 
     // 3. Bottleneck Analysis Logic (Immediate)
     const list = document.getElementById('bottleneck-action-list');
@@ -3022,6 +3129,42 @@ function finalScrapUnit(sn) {
 }
 
 // Global System Boot
+
+// ── 1. DAILY RESET CHECK ───────────────────────────────────────────────────
+function checkDailyReset() {
+    const TODAY = new Date().toISOString().split('T')[0]; // e.g. "2026-04-09"
+    const lastReset = localStorage.getItem('lastResetDate');
+
+    if (lastReset && lastReset !== TODAY) {
+        // ── Archive yesterday's totals before wiping ───────────────────────
+        const allUnits = Object.values(units);
+        const yesterdayFPY = allUnits.length > 0
+            ? ((allUnits.filter(u => u.status === 'COMPLETED').length / allUnits.length) * 100).toFixed(1)
+            : null;
+
+        if (yesterdayFPY !== null) {
+            const history = JSON.parse(localStorage.getItem('dailyHistory') || '[]');
+            history.push({ date: lastReset, fpy: parseFloat(yesterdayFPY), total: allUnits.length });
+            localStorage.setItem('dailyHistory', JSON.stringify(history.slice(-30))); // keep last 30 days
+        }
+
+        // ── Wipe current-day shift data ────────────────────────────────
+        units = {};
+        localStorage.removeItem('productionUnits');
+        // Reset yield counters back to zeros (keep 7-slot structure)
+        yieldData.inspected = [0, 0, 0, 0, 0, 0, 0];
+        yieldData.passed = [0, 0, 0, 0, 0, 0, 0];
+        yieldData.scrapped = [0, 0, 0, 0, 0, 0, 0];
+        localStorage.removeItem('yieldData');
+
+        console.log(`🌅 Daily reset triggered: ${lastReset} → ${TODAY}. Yesterday FPY archived: ${yesterdayFPY}%`);
+        showToast(`🌅 New day — ${TODAY}. Yesterday’s shift data archived. Fresh slate started.`, 'info', 6000);
+    }
+
+    localStorage.setItem('lastResetDate', TODAY);
+}
+
 applyRoleRestrictions();
+checkDailyReset();
 initSystemCloudSync();
 lucide.createIcons();
