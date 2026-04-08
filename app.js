@@ -893,7 +893,8 @@ function render(templateKey, title, breadcrumb) {
         const currentYield = (totalPassed / totalInspected * 100).toFixed(1);
         const lift = (currentYield - historicalSummary.manualEra.avgYield).toFixed(1);
 
-        document.getElementById('yield-lift-val').textContent = `+${lift}%`;
+        const yieldLiftEl = document.getElementById('yield-lift-val');
+        if (yieldLiftEl) yieldLiftEl.textContent = `+${lift}%`;
 
         // Inject Fatigue Visuals
         const fatigueBars = fatigueData.map((v, i) => `
