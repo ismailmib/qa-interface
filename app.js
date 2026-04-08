@@ -138,6 +138,7 @@ let simStopped = false;  // true = loop should abort after current unit
 let simQueueNext = false; // true = queue another batch after current completes
 let simBatchSize = 100;  // default batch size
 let currentView = '';   // 📍 Tracks the currently active page/template
+let analyticsLiveInterval = null; // 🔄 Polling interval for live analytics refresh
 
 async function persistUsers() {
     localStorage.setItem('usersData', JSON.stringify(usersData));
@@ -1472,6 +1473,23 @@ function render(templateKey, title, breadcrumb) {
     if (templateKey === 'analytics') {
         updateAnalyticsSummary();
         renderExecutiveCharts();
+        // 🔄 START LIVE POLLING: re-read units data every 2.5s
+        if (analyticsLiveInterval) clearInterval(analyticsLiveInterval);
+        analyticsLiveInterval = setInterval(() => {
+            if (currentView !== 'analytics' && currentView !== 'executiveAnalytics') {
+                clearInterval(analyticsLiveInterval);
+                analyticsLiveInterval = null;
+                return;
+            }
+            updateAnalyticsSummary();
+            renderExecutiveCharts();
+        }, 2500);
+    } else {
+        // ⏹ STOP POLLING when leaving analytics
+        if (analyticsLiveInterval) {
+            clearInterval(analyticsLiveInterval);
+            analyticsLiveInterval = null;
+        }
     }
 
     lucide.createIcons();
@@ -1711,7 +1729,7 @@ async function generateMockShiftData(batchSz) {
 
         await new Promise(r => setTimeout(r, 350));
 
-        if (!document.getElementById('sim-control-bar')) break;
+        // simulation continues running even when navigating away — no DOM check needed
     }
 
     // Final Save
