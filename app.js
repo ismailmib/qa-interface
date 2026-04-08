@@ -405,16 +405,16 @@ const templates = {
                 </div>
             </div>
 
-            <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
-                <div class="card glass" style="padding:0; overflow:hidden;">
-                     <div style="padding: 1.5rem; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; align-items: stretch;">
+                <div class="card glass" style="padding:0; overflow:hidden; display:flex; flex-direction:column;">
+                     <div style="padding: 1.5rem; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                         <h3 class="section-title-sm" style="margin:0;">Factory Operational Heartbeat</h3>
                         <div class="flex items-center gap-2">
                              <div class="status-dot-pulse"></div>
                              <span style="font-size: 0.65rem; font-weight: 800; color: var(--success);">LIVE STREAM ACTIVE</span>
                         </div>
                      </div>
-                     <div class="table-container" style="border:none; border-radius:0; max-height: 700px;">
+                     <div class="table-container" style="border:none; border-radius:0; flex:1; overflow-y:auto;">
                         <table>
                             <thead><tr><th>RECENT LOGS</th><th>STATION</th><th>EVENT</th><th>TIMESTAMP</th></tr></thead>
                             <tbody id="live-audit-stream">
