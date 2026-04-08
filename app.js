@@ -113,6 +113,12 @@ let globalAuditLog = [];
 // 🏺 Persistence Handlers (CLOUD + LOCAL REDUNDANCY)
 let cloudWriteLock = false; // 🔒 Prevents snapshot from overwriting during active writes
 
+// 🎮 Simulation Control Flags
+let simPaused = false;  // true = loop is frozen mid-run
+let simStopped = false;  // true = loop should abort after current unit
+let simQueueNext = false; // true = queue another batch after current completes
+let simBatchSize = 100;  // default batch size
+
 async function persistUsers() {
     localStorage.setItem('usersData', JSON.stringify(usersData));
     if (cloudActive) {
@@ -980,16 +986,46 @@ function render(templateKey, title, breadcrumb) {
         updateAuditFeed();
         updateStageHeatmap('stage-yield-heat-map');
 
-        // ✨ Add a Simulation Trigger for Admin testing
+        // ✨ Simulation Control Center
         const header = document.querySelector('.admin-hero-header');
-        if (header && !document.getElementById('sim-trigger-btn')) {
-            const btn = document.createElement('button');
-            btn.id = 'sim-trigger-btn';
-            btn.className = 'btn btn-outline';
-            btn.innerHTML = '<i data-lucide="play-circle" style="width:16px;"></i> Simulate 100-Unit Shift';
-            btn.style.marginLeft = 'auto';
-            btn.onclick = generateMockShiftData;
-            header.appendChild(btn);
+        if (header && !document.getElementById('sim-control-bar')) {
+            const bar = document.createElement('div');
+            bar.id = 'sim-control-bar';
+            bar.style.cssText = 'display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-wrap:wrap;';
+            bar.innerHTML = `
+                <!-- Batch size selector -->
+                <div id="sim-batch-selector" style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; padding:3px 6px;">
+                    <span style="font-size:0.6rem; color:var(--text-muted); font-weight:800; margin-right:4px;">BATCH</span>
+                    <button onclick="simBatchSize=50;  document.querySelectorAll('.sim-sz-btn').forEach(b=>b.classList.remove('active-sz')); this.classList.add('active-sz');" class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:5px;cursor:pointer;">50</button>
+                    <button onclick="simBatchSize=100; document.querySelectorAll('.sim-sz-btn').forEach(b=>b.classList.remove('active-sz')); this.classList.add('active-sz');" class="sim-sz-btn active-sz" style="background:var(--primary);border:none;color:#fff;font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:5px;cursor:pointer;">100</button>
+                    <button onclick="simBatchSize=200; document.querySelectorAll('.sim-sz-btn').forEach(b=>b.classList.remove('active-sz')); this.classList.add('active-sz');" class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:5px;cursor:pointer;">200</button>
+                </div>
+
+                <!-- Start button (IDLE state) -->
+                <button id="sim-trigger-btn" class="btn btn-outline" onclick="generateMockShiftData()" style="gap:6px;">
+                    <i data-lucide="play-circle" style="width:15px;"></i> Simulate Shift
+                </button>
+
+                <!-- Pause / Resume (hidden until running) -->
+                <button id="sim-pause-btn" class="btn btn-outline" onclick="toggleSimPause()" style="display:none; gap:6px;">
+                    <i data-lucide="pause-circle" style="width:15px;"></i> Pause
+                </button>
+
+                <!-- Abort (hidden until running/paused) -->
+                <button id="sim-stop-btn" class="btn btn-outline" onclick="abortSim()" style="display:none; gap:6px; border-color:var(--error); color:var(--error);">
+                    <i data-lucide="stop-circle" style="width:15px;"></i> Abort
+                </button>
+
+                <!-- Queue Next Batch (hidden until paused or done) -->
+                <button id="sim-next-btn" class="btn btn-outline" onclick="queueNextBatch()" style="display:none; gap:6px; border-color:var(--success); color:var(--success);">
+                    <i data-lucide="skip-forward" style="width:15px;"></i> Next Batch
+                </button>
+
+                <!-- Progress label -->
+                <span id="sim-progress-label" style="font-size:0.65rem; font-weight:800; color:var(--text-muted); display:none;"></span>
+            `;
+            header.appendChild(bar);
+            lucide.createIcons();
         }
     }
     if (templateKey === 'analytics') {
@@ -1028,43 +1064,124 @@ function render(templateKey, title, breadcrumb) {
     lucide.createIcons();
 }
 
-/** 🚀 INTERACTIVE FACTORY STREAM (Live Shift Simulation) */
-async function generateMockShiftData() {
-    if (!confirm("🏭 Start Live Production Stream? This will process 100 NEW units. Each run generates a fresh batch with randomized results.")) return;
-
-    const btn = document.getElementById('sim-trigger-btn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<div class="status-dot-pulse"></div> Line Active...';
+// ── Simulation Control Helpers ───────────────────────────────────────────────
+function toggleSimPause() {
+    simPaused = !simPaused;
+    const btn = document.getElementById('sim-pause-btn');
+    const lbl = document.getElementById('sim-progress-label');
+    const nextBtn = document.getElementById('sim-next-btn');
+    if (simPaused) {
+        if (btn) btn.innerHTML = '<i data-lucide="play-circle" style="width:15px;"></i> Resume';
+        if (btn) btn.style.borderColor = 'var(--success)';
+        if (btn) btn.style.color = 'var(--success)';
+        if (nextBtn) nextBtn.style.display = 'flex';
+        if (lbl) lbl.textContent = '⏸ PAUSED';
+        showToast('⏸ Simulation paused. Click Resume to continue.', 'warning');
+    } else {
+        if (btn) btn.innerHTML = '<i data-lucide="pause-circle" style="width:15px;"></i> Pause';
+        if (btn) btn.style.borderColor = '';
+        if (btn) btn.style.color = '';
+        if (nextBtn) nextBtn.style.display = 'none';
+        showToast('▶️ Simulation resumed.', 'success');
     }
+    lucide.createIcons();
+}
+
+function abortSim() {
+    if (!confirm('Abort the current simulation run? Progress so far will be saved.')) return;
+    simStopped = true;
+    simPaused = false;
+    showToast('🛑 Simulation aborted. Processed units have been saved.', 'error');
+}
+
+function queueNextBatch() {
+    simQueueNext = true;
+    simPaused = false; // auto-resume if paused
+    showToast('⏭ Next batch queued — will start when current batch completes.', 'info');
+    const nextBtn = document.getElementById('sim-next-btn');
+    if (nextBtn) { nextBtn.disabled = true; nextBtn.innerHTML = '<i data-lucide="loader" style="width:15px;"></i> Queued'; lucide.createIcons(); }
+    // If we're paused, un-pause immediately so it completes and triggers next
+    const pauseBtn = document.getElementById('sim-pause-btn');
+    if (pauseBtn && pauseBtn.innerHTML.includes('Resume')) toggleSimPause();
+}
+
+function setSimControlState(state) {
+    // state: 'idle' | 'running' | 'paused' | 'done'
+    const startBtn = document.getElementById('sim-trigger-btn');
+    const pauseBtn = document.getElementById('sim-pause-btn');
+    const stopBtn = document.getElementById('sim-stop-btn');
+    const nextBtn = document.getElementById('sim-next-btn');
+    const sizeBar = document.getElementById('sim-batch-selector');
+    const lbl = document.getElementById('sim-progress-label');
+    if (!startBtn) return;
+
+    if (state === 'running') {
+        startBtn.style.display = 'none';
+        if (sizeBar) sizeBar.style.opacity = '0.4';
+        if (pauseBtn) pauseBtn.style.display = 'flex';
+        if (stopBtn) stopBtn.style.display = 'flex';
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (lbl) lbl.style.display = 'block';
+    } else if (state === 'done') {
+        startBtn.style.display = 'flex';
+        startBtn.disabled = false;
+        const total = Object.keys(units).length;
+        startBtn.innerHTML = `<i data-lucide="play-circle" style="width:15px;"></i> Simulate Shift <span style="font-size:0.65rem;opacity:0.6;">(${total} total)</span>`;
+        if (sizeBar) sizeBar.style.opacity = '1';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (lbl) lbl.style.display = 'none';
+        lucide.createIcons();
+    }
+}
+
+/** 🚀 INTERACTIVE FACTORY STREAM (Live Shift Simulation) */
+async function generateMockShiftData(batchSz) {
+    const SIZE = batchSz || simBatchSize || 100;
+
+    // Reset control flags
+    simPaused = false;
+    simStopped = false;
+    simQueueNext = false;
+
+    setSimControlState('running');
 
     // 🆕 FRESH BATCH: Unique time-stamped prefix ensures every run produces new serial numbers
     const now = new Date();
     const batchPrefix = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
-    const batchSerials = Array.from({ length: 100 }, (_, i) => `B${batchPrefix}-${(i + 1).toString().padStart(3, '0')}`);
+    const batchSerials = Array.from({ length: SIZE }, (_, i) => `B${batchPrefix}-${(i + 1).toString().padStart(3, '0')}`);
 
-    // 🎲 RANDOMIZED SPLIT every run: passCount 78–95, scrapCount 2–12, wip = remainder
-    const passCount = 78 + Math.floor(Math.random() * 18);
-    const scrapCount = 2 + Math.floor(Math.random() * 11);
-    const wipCount = 100 - passCount - scrapCount;
+    // 🎲 RANDOMIZED SPLIT every run
+    const passCount = Math.round(SIZE * (0.78 + Math.random() * 0.17));
+    const scrapCount = Math.round(SIZE * (0.02 + Math.random() * 0.10));
 
     const stages = manufacturingStages.sort((a, b) => a.order - b.order);
-    showToast(`📡 BATCH ${batchPrefix}: ${passCount} PASS | ${scrapCount} MRB | ${wipCount} WIP targeted`, "info", 5000);
+    showToast(`📡 BATCH ${batchPrefix} [${SIZE} units]: ${passCount} PASS | ${scrapCount} MRB | ${SIZE - passCount - scrapCount} WIP`, 'info', 5000);
 
     for (const [idx, sn] of batchSerials.entries()) {
-        let status = "COMPLETED";
+        // ⏸ PAUSE: wait here until resumed or stopped
+        while (simPaused && !simStopped) {
+            await new Promise(r => setTimeout(r, 200));
+        }
+        // 🛑 ABORT
+        if (simStopped) break;
+
+        // Update progress label
+        const lbl = document.getElementById('sim-progress-label');
+        if (lbl) lbl.textContent = `🔄 Unit ${idx + 1} / ${SIZE} — ${batchPrefix}`;
+
+        let status = 'COMPLETED';
         let currOrder = stages.length;
         let failedStage = null;
 
         if (idx >= passCount && idx < passCount + scrapCount) {
-            // 🔴 MRB: fail at a random stage (min stage 1, never beyond last)
-            status = "MRB_REVIEW";
+            status = 'MRB_REVIEW';
             const failIdx = Math.max(1, Math.floor(Math.random() * stages.length));
             failedStage = stages[failIdx - 1];
             currOrder = failIdx;
         } else if (idx >= passCount + scrapCount) {
-            // 🟡 WIP: stopped mid-way
-            status = "IN_PROGRESS";
+            status = 'IN_PROGRESS';
             currOrder = Math.max(1, Math.floor(Math.random() * stages.length));
         }
 
@@ -1072,7 +1189,6 @@ async function generateMockShiftData() {
             serial: sn,
             status,
             currentStageOrder: currOrder,
-            // ✅ FIX: Store the exact failed stage so rework resumes from there, not Stage 1
             scrapStageOrder: failedStage ? failedStage.order : null,
             scrapStageName: failedStage ? failedStage.name : null,
             isRework: false,
@@ -1085,8 +1201,8 @@ async function generateMockShiftData() {
             if (!stage) continue;
             unit.history.push({
                 stage: stage.name,
-                status: (o === currOrder && status === "MRB_REVIEW") ? "UNIT_REJECTED" : "PASS",
-                operator: "Simulation Engine",
+                status: (o === currOrder && status === 'MRB_REVIEW') ? 'UNIT_REJECTED' : 'PASS',
+                operator: 'Simulation Engine',
                 time: new Date().toLocaleTimeString()
             });
         }
@@ -1096,39 +1212,45 @@ async function generateMockShiftData() {
         if (yieldData.inspected.length > 0) {
             const lastIdx = yieldData.inspected.length - 1;
             yieldData.inspected[lastIdx]++;
-            if (status === "COMPLETED") yieldData.passed[lastIdx]++;
-            if (status === "MRB_REVIEW") yieldData.scrapped[lastIdx]++;
+            if (status === 'COMPLETED') yieldData.passed[lastIdx]++;
+            if (status === 'MRB_REVIEW') yieldData.scrapped[lastIdx]++;
         }
 
         globalAuditLog.push({
-            event: status === "MRB_REVIEW" ? "UNIT_SCRAP" : "UNIT_PASS",
+            event: status === 'MRB_REVIEW' ? 'UNIT_SCRAP' : 'UNIT_PASS',
             details: `S/N ${sn} — ${status === 'MRB_REVIEW' ? 'REJECTED at ' + failedStage?.name : status}.`,
             time: new Date().toLocaleString(),
-            op: "Simulation Engine"
+            op: 'Simulation Engine'
         });
 
-        // 🔄 TRIGGER LIVE UI UPDATES (The "Show" part)
+        // 🔄 Live UI updates
         updateAdminGauges();
         updateAuditFeed();
         updateStageHeatmap('stage-yield-heat-map');
 
-        // Visual processing delay (350ms per unit)
         await new Promise(r => setTimeout(r, 350));
 
-        // Stop if Admin navigates away
-        if (!document.getElementById('sim-trigger-btn')) break;
+        if (!document.getElementById('sim-control-bar')) break;
     }
 
     // Final Save
     persistUnits();
     persistYieldData();
     persistAudit();
-    showToast("✅ PRODUCTION STREAM COMPLETE: Shift totals synchronized.", "success");
-    if (btn) {
-        const runningTotal = Object.keys(units).length;
-        btn.disabled = false;
-        btn.innerHTML = `<i data-lucide="play-circle" style="width:16px;"></i> Simulate Another 100 Units <span style="font-size:0.7rem; opacity:0.6;">(${runningTotal} total processed)</span>`;
-        lucide.createIcons();
+
+    if (simStopped) {
+        showToast(`🛑 Aborted at unit ${Object.keys(units).length}. Data saved.`, 'warning');
+    } else {
+        showToast(`✅ BATCH ${batchPrefix} COMPLETE — ${SIZE} units processed.`, 'success');
+    }
+
+    setSimControlState('done');
+
+    // Auto-start next batch if queued
+    if (simQueueNext && !simStopped) {
+        simQueueNext = false;
+        showToast(`⏭ Starting next batch of ${SIZE} units...`, 'info', 2000);
+        setTimeout(() => generateMockShiftData(SIZE), 1500);
     }
 }
 
