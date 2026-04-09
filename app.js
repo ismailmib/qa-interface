@@ -1864,11 +1864,11 @@ async function clearCurrentShiftData() {
         await persistAudit();
     }
 
-    // 4. Force Reload UI
-    updateAdminGauges();
-    updateAuditFeed();
-    updateStageHeatmap('stage-yield-heat-map');
-    showToast("✅ System Purged: All Shift Data Cleared.", "success");
+    // 4. Force Reload to start fresh
+    showToast("✨ System Cleaned. Rebooting...", "success", 2000);
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
 }
 
 function updateShiftSummaryCard() {
