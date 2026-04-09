@@ -801,14 +801,14 @@ const templates = {
                         <input type="text" id="search-serial" placeholder="Lookup Serial (e.g. B-101) for full heritage drill-down..." style="flex: 1;">
                         <button class="btn btn-primary" onclick="searchUnit()"><i data-lucide="search" style="width:18px"></i> Trace Unit</button>
                     </div>
-                    <div class="flex flex-wrap gap-x-8 gap-y-4 items-center" style="font-size: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                        <span class="text-muted" style="font-weight: 800;">QUICK FILTERS:</span>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="all" checked onchange="runLiveFilter()"> All Units</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="mrb" onchange="runLiveFilter()"><span style="color:var(--error); font-weight:800;">Pending Review (MRB)</span></label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="wip" onchange="runLiveFilter()"> WIP</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="passed" onchange="runLiveFilter()"> Passed</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="scrap" onchange="runLiveFilter()"> Scrap</label>
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ledger-filter" value="rework" onchange="runLiveFilter()"> Rework</label>
+                    <div class="filter-group" style="padding-top: 1rem; border-top: 1px solid var(--border);">
+                        <span class="text-muted" style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-right: 0.5rem;">Quick Filters:</span>
+                        <label class="filter-chip"><input type="radio" name="ledger-filter" value="all" checked onchange="runLiveFilter()"> All Units</label>
+                        <label class="filter-chip"><input type="radio" name="ledger-filter" value="mrb" onchange="runLiveFilter()"><span style="color:var(--error);">Pending Review (MRB)</span></label>
+                        <label class="filter-chip"><input type="radio" name="ledger-filter" value="wip" onchange="runLiveFilter()"> WIP</label>
+                        <label class="filter-chip"><input type="radio" name="ledger-filter" value="passed" onchange="runLiveFilter()"> Passed</label>
+                        <label class="filter-chip"><input type="radio" name="ledger-filter" value="scrap" onchange="runLiveFilter()"> Scrap</label>
+                        <label class="filter-chip"><input type="radio" name="ledger-filter" value="rework" onchange="runLiveFilter()"> Rework</label>
                     </div>
                 </div>
             </div>
