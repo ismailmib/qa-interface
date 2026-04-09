@@ -100,7 +100,12 @@ let currentUser = null;
 let currentBatchProgress = 84;
 
 // 📊 Global Datasets (Initialized empty, populated from Cloud/Local)
-let yieldData = { labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'], inspected: [120, 150, 140, 180, 160, 90, 110], passed: [115, 142, 138, 172, 155, 88, 108], scrapped: [5, 8, 2, 8, 5, 2, 2] };
+let yieldData = {
+    labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+    inspected: [0, 0, 0, 0, 0, 0, 0],
+    passed: [0, 0, 0, 0, 0, 0, 0],
+    scrapped: [0, 0, 0, 0, 0, 0, 0]
+};
 let units = {};
 let manufacturingStages = [...DEFAULT_STAGES];
 // ✅ START WITH EMPTY — always load from localStorage/Firebase (prevents stale hardcoded list)
@@ -176,8 +181,12 @@ async function persistUnits() {
 }
 
 async function pushAudit(event, details) {
-    globalAuditLog.unshift({ time: new Date().toLocaleTimeString(), op: currentUser.name, event: event, details: details });
+    globalAuditLog.unshift({ time: new Date().toLocaleTimeString(), op: currentUser.name || 'System', event: event, details: details });
     if (globalAuditLog.length > 50) globalAuditLog.pop();
+    persistAudit();
+}
+
+async function persistAudit() {
     localStorage.setItem('globalAuditLog', JSON.stringify(globalAuditLog));
     if (cloudActive) await db.collection('sys').doc('audit').set({ data: globalAuditLog });
 }
@@ -275,6 +284,15 @@ async function initSystemCloudSync() {
                     if (col === 'ledger' && !ledgerWriteLock) units = cloudData;
                     if (col === 'analytics') yieldData = cloudData;
                     if (col === 'audit') globalAuditLog = cloudData;
+
+                    // 🛰️ LIVE UI REFRESH: Update dashboard gauges/charts as soon as cloud data arrives
+                    if (col === 'ledger' || col === 'analytics') {
+                        if (currentView === 'adminDashboard') updateAdminGauges();
+                        if (currentView === 'analytics' || currentView === 'executiveAnalytics') {
+                            updateAnalyticsSummary();
+                            renderExecutiveCharts();
+                        }
+                    }
 
                     // Live UI Refreshes (If on correct view)
                     if (col === 'ledger' && document.getElementById('trace-result-area')) runLiveFilter();
@@ -3720,6 +3738,13 @@ function checkDailyReset() {
         yieldData.passed = [0, 0, 0, 0, 0, 0, 0];
         yieldData.scrapped = [0, 0, 0, 0, 0, 0, 0];
         localStorage.removeItem('yieldData');
+
+        // ☁️ CLOUD SYNC: Ensure Firebase is also wiped (prevent old data from syncing back)
+        if (cloudActive) {
+            persistUnits();
+            persistYieldData();
+            persistAudit();
+        }
 
         console.log(`🌅 Daily reset triggered: ${lastReset} → ${TODAY}. Yesterday FPY archived: ${yesterdayFPY}%`);
         showToast(`🌅 New day — ${TODAY}. Yesterday’s shift data archived. Fresh slate started.`, 'info', 6000);
