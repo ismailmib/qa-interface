@@ -1974,7 +1974,7 @@ function updateStageHeatmap(containerId) {
         }));
 
         const passes = stageEvents.filter(e => e.status === 'PASS').length;
-        const fails = stageEvents.filter(e => e.status === 'SCRAP').length;
+        const fails = stageEvents.filter(e => e.status === 'UNIT_REJECTED').length;
         const total = passes + fails;
         const yieldVal = total > 0 ? ((passes / total) * 100).toFixed(1) : "100.0";
         const color = yieldVal > 95 ? 'var(--success)' : (yieldVal > 90 ? 'var(--warning)' : 'var(--error)');
@@ -2771,7 +2771,7 @@ function renderHeritageView(unit) {
                         <table>
                             <thead><tr><th>Stage</th><th>Status</th><th>Operator</th><th>Time</th></tr></thead>
                             <tbody>
-                                ${unit.history.slice().reverse().map(h => `<tr><td><strong>${h.stage}</strong></td><td><span class="badge ${h.status === 'PASS' ? 'badge-success' : (h.status === 'SCRAP' || h.status === 'FAIL' ? 'badge-error' : 'badge-warning')}">${h.status}</span></td><td>${h.operator}</td><td class="text-muted">${h.time}</td></tr>`).join('')}
+                                ${unit.history.slice().reverse().map(h => `<tr><td><strong>${h.stage}</strong></td><td><span class="badge ${h.status === 'PASS' ? 'badge-success' : (h.status === 'SCRAP' || h.status === 'FAIL' || h.status === 'UNIT_REJECTED' ? 'badge-error' : 'badge-warning')}">${h.status}</span></td><td>${h.operator}</td><td class="text-muted">${h.time}</td></tr>`).join('')}
                             </tbody>
                         </table>
                     </div>
