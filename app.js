@@ -1480,8 +1480,8 @@ function render(templateKey, title, breadcrumb) {
     }
     if (templateKey === 'analytics') {
         updateAnalyticsSummary();
-        renderExecutiveCharts();
-        // 🔄 START LIVE POLLING: re-read units data every 2.5s
+        renderExecutiveCharts(); // full render on first load (SPC + Trend + Pareto)
+        // 🔄 START LIVE POLLING: only refresh SPC + KPIs every 2.5s (NOT static charts)
         if (analyticsLiveInterval) clearInterval(analyticsLiveInterval);
         analyticsLiveInterval = setInterval(() => {
             if (currentView !== 'analytics' && currentView !== 'executiveAnalytics') {
@@ -1490,7 +1490,7 @@ function render(templateKey, title, breadcrumb) {
                 return;
             }
             updateAnalyticsSummary();
-            renderExecutiveCharts();
+            renderSPCChartOnly(); // ✅ only the live SPC chart — NOT Trend/Pareto (static)
         }, 2500);
     } else {
         // ⏹ STOP POLLING when leaving analytics
@@ -1760,12 +1760,11 @@ async function generateMockShiftData(batchSz) {
 
     setSimControlState('done');
 
-    // 📊 Refresh Analytics Charts once after full batch completes
-    // (Heavy chart re-render: done once per batch, not per unit)
+    // 📊 Only refresh SPC chart after batch completes (not Trend/Pareto — they're static)
     if (currentView === 'analytics' || currentView === 'executiveAnalytics') {
         setTimeout(() => {
             updateAnalyticsSummary();
-            renderExecutiveCharts();
+            renderSPCChartOnly(); // ✅ live chart only
         }, 300);
     }
 
@@ -3189,177 +3188,15 @@ function renderExecutiveCharts() {
             // Hide loader placeholders
             document.querySelectorAll('.chart-loader').forEach(l => l.style.display = 'none');
 
-            // 1. SPC Chart — Shewhart Control Chart (X̄ ± 3σ)
-            // ─────────────────────────────────────────────────────────────────────
-            // HOW IT WORKS:
-            //   • We slice ALL processed units into batches of 10.
-            //   • For each batch: Batch Yield % = (passed in batch / 10) × 100
-            //   • Mean (X̄) = average of all batch yields
-            //   • Std Dev (σ) = sqrt(Σ(yi - X̄)² / n) — measures how spread out yields are
-            //   • UCL = X̄ + 3σ  (above this = unusually good, investigate for measurement error)
-            //   • LCL = X̄ − 3σ  (below this = process OUT OF CONTROL — stop line!)
-            //   • Any point BELOW LCL on the chart is a RED DOT — critical alert.
-            // If fewer than 2 batches exist, we show a realistic demo dataset.
-            // ─────────────────────────────────────────────────────────────────────
-            const spcCanvas = document.getElementById('spc-yield-chart');
-            if (spcCanvas) {
-                destroyIfExists('spc-yield-chart');
+            // 1. Live SPC Chart (updates frequently)
+            renderSPCChartOnly();
 
-                const isExpanded = document.getElementById('card-spc')?.classList.contains('card-expanded') || false;
-                const fontSize = isExpanded ? 14 : 9;
-                const titleSize = isExpanded ? 16 : 10;
-                const lineWeight = isExpanded ? 4 : 2;
-                const dotSize = isExpanded ? 10 : 5;
-                const activeDotSize = isExpanded ? 14 : 8;
-
-                // ── Group by REAL batch label (per production run) ──
-                const batchMap = new Map();
-                Object.values(units).forEach(u => {
-                    const label = u.batchLabel || u.serial.split('-')[0];
-                    if (!batchMap.has(label)) batchMap.set(label, { total: 0, passed: 0 });
-                    const b = batchMap.get(label);
-                    b.total++;
-                    if (u.status === 'COMPLETED') b.passed++;
-                });
-
-                const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
-                const useDemo = batchMap.size < 2;
-
-                let allYields, batchYields, labels;
-                if (useDemo) {
-                    allYields = DEMO;
-                    batchYields = DEMO;
-                    labels = DEMO.map((_, i) => `Demo ${i + 1}`);
-                } else {
-                    const entries = Array.from(batchMap.entries())
-                        .sort((a, b) => a[0].localeCompare(b[0]));
-                    allYields = entries.map(([, v]) => parseFloat(((v.passed / v.total) * 100).toFixed(1)));
-                    batchYields = allYields.slice(-20);
-                    const allKeys = entries.map(([k]) => k);
-                    labels = allKeys.slice(-20).map((k, i) => `Batch ${allYields.length - batchYields.length + i + 1}`);
-                }
-
-                // ── Shewhart Calculations (computed from FULL dataset for consistency) ──
-                const n = allYields.length;
-                const mean = allYields.reduce((a, b) => a + b, 0) / n;
-                const variance = allYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
-                const sigma = Math.sqrt(variance);
-                const ucl = Math.min(parseFloat((mean + 3 * sigma).toFixed(1)), 100);
-                const lcl = Math.max(parseFloat((mean - 3 * sigma).toFixed(1)), 70);
-
-                // Update footer labels
-                const uclEl = document.getElementById('spc-ucl-label');
-                const meanEl = document.getElementById('spc-mean-label');
-                const lclEl = document.getElementById('spc-lcl-label');
-                if (uclEl) uclEl.textContent = ucl.toFixed(1) + '%';
-                if (meanEl) meanEl.textContent = mean.toFixed(1) + '%';
-                if (lclEl) lclEl.textContent = lcl.toFixed(1) + '%';
-
-                // Red dots for out-of-control points (below LCL)
-                const pointColors = batchYields.map(y => y < lcl ? '#ef4444' : '#10b981');
-                const pointRadii = batchYields.map(y => y < lcl ? 8 : 5);
-
-                new Chart(spcCanvas, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: 'Batch Yield %',
-                            data: batchYields,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                            borderWidth: lineWeight,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: batchYields.map(y => y < lcl ? activeDotSize : dotSize),
-                            pointBackgroundColor: pointColors,
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: isExpanded ? 3 : 2
-                        }, {
-                            label: `UCL (${ucl.toFixed(1)}%)`,
-                            data: Array(n).fill(ucl),
-                            borderColor: 'rgba(139,92,246,0.5)',
-                            borderDash: [4, 4],
-                            pointStyle: false,
-                            fill: false
-                        }, {
-                            label: `Mean X̄ (${mean.toFixed(1)}%)`,
-                            data: Array(n).fill(parseFloat(mean.toFixed(1))),
-                            borderColor: 'rgba(59,130,246,0.7)',
-                            borderDash: [8, 4],
-                            pointStyle: false,
-                            fill: false
-                        }, {
-                            label: `LCL (${lcl.toFixed(1)}%) — Below = OUT OF CONTROL`,
-                            data: Array(n).fill(lcl),
-                            borderColor: 'rgba(239,68,68,0.7)',
-                            borderWidth: isExpanded ? 4 : 2,
-                            borderDash: [6, 4],
-                            pointStyle: false,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 700 },
-                        plugins: {
-                            legend: {
-                                display: true,
-                                labels: {
-                                    color: 'rgba(255,255,255,0.7)',
-                                    font: { size: fontSize, weight: '700' },
-                                    boxWidth: isExpanded ? 30 : 20,
-                                    padding: isExpanded ? 20 : 10
-                                }
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                callbacks: {
-                                    afterLabel(ctx) {
-                                        if (ctx.datasetIndex === 0) {
-                                            const y = ctx.parsed.y;
-                                            if (y < lcl) return '⚠️ OUT OF CONTROL — Below LCL';
-                                            if (y > ucl) return '⚠️ ABOVE UCL — Check measurement';
-                                            return '✅ In Control';
-                                        }
-                                        return null;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                min: Math.max(70, lcl - 5),
-                                max: 100,
-                                grid: { color: 'rgba(255,255,255,0.05)' },
-                                ticks: {
-                                    color: 'rgba(255,255,255,0.4)',
-                                    callback: v => v + '%',
-                                    font: { size: fontSize, weight: '700' }
-                                },
-                                title: { display: isExpanded, text: 'BATCH YIELD %', color: 'rgba(255,255,255,0.3)', font: { size: titleSize, weight: '800' }, padding: 10 }
-                            },
-                            x: {
-                                grid: { display: false },
-                                ticks: {
-                                    color: 'rgba(255,255,255,0.4)',
-                                    font: { size: fontSize, weight: '700' }
-                                },
-                                title: { display: isExpanded, text: 'PRODUCTION BATCH TIMELINE', color: 'rgba(255,255,255,0.3)', font: { size: titleSize, weight: '800' }, padding: 10 }
-                            }
-                        }
-                    }
-                });
-                console.log(`✅ SPC Chart: ${n} batches | X̄=${mean.toFixed(1)}% | σ=${sigma.toFixed(2)} | UCL=${ucl}% | LCL=${lcl}%`);
-            } else {
-                console.warn('⚠️ #spc-yield-chart canvas not found in DOM.');
-            }
-
-            // 2. 6-Month Trend Chart
+            // 2. 6-Month Trend Chart — STATIC DATA, skip if already rendered
             const trendCanvas = document.getElementById('monthly-trend-chart');
-            if (trendCanvas) {
+            if (trendCanvas && Chart.getChart(trendCanvas)) {
+                // chart already exists and data is static — skip re-render
+            } else if (trendCanvas) {
+                // first render only
                 destroyIfExists('monthly-trend-chart');
 
                 // Unit counts for each legacy month (totalFG / inventoryPlan from legacyManualPerformance)
@@ -3469,8 +3306,11 @@ function renderExecutiveCharts() {
             //   • A green cumulative % line shows where 80% of rejections come from
             //   • Managers immediately see the single biggest bottleneck to fix
             // ─────────────────────────────────────────────────────────────
+            // 3. Defect Pareto Chart — Rejections by Stage
             const paretoCanvas = document.getElementById('pareto-chart');
-            if (paretoCanvas) {
+            if (paretoCanvas && Chart.getChart(paretoCanvas)) {
+                // skip re-render
+            } else if (paretoCanvas) {
                 destroyIfExists('pareto-chart');
 
                 // Build rejection count per stage name
@@ -3643,6 +3483,193 @@ function renderExecutiveCharts() {
         }
         lucide.createIcons();
     }
+
+    // 🔄 Always update bottlenecks even if charts are skipped
+    updateBottleneckSummary();
+}
+
+function renderSPCChartOnly() {
+    try {
+        const id = 'spc-yield-chart';
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+
+        // Destroy existing for this specific ID
+        if (typeof Chart.getChart === 'function') {
+            const existing = Chart.getChart(id);
+            if (existing) existing.destroy();
+        }
+
+        const isExpanded = document.getElementById('card-spc')?.classList.contains('card-expanded') || false;
+        const fontSize = isExpanded ? 14 : 9;
+        const titleSize = isExpanded ? 16 : 10;
+        const lineWeight = isExpanded ? 4 : 2;
+        const dotSize = isExpanded ? 10 : 5;
+        const activeDotSize = isExpanded ? 14 : 8;
+
+        const batchMap = new Map();
+        Object.values(units).forEach(u => {
+            const label = u.batchLabel || u.serial.split('-')[0];
+            if (!batchMap.has(label)) batchMap.set(label, { total: 0, passed: 0 });
+            const b = batchMap.get(label);
+            b.total++;
+            if (u.status === 'COMPLETED') b.passed++;
+        });
+
+        const DEMO = [96.5, 97.2, 95.8, 92.4, 98.1, 96.6, 95.2, 97.8, 98.5, 96.2, 94.8, 97.5];
+        const useDemo = batchMap.size < 2;
+
+        let allYields, batchYields, labels;
+        if (useDemo) {
+            allYields = DEMO;
+            batchYields = DEMO;
+            labels = DEMO.map((_, i) => `Demo ${i + 1}`);
+        } else {
+            const entries = Array.from(batchMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+            allYields = entries.map(([, v]) => parseFloat(((v.passed / v.total) * 100).toFixed(1)));
+            batchYields = allYields.slice(-20);
+            const allKeys = entries.map(([k]) => k);
+            labels = allKeys.slice(-20).map((k, i) => `Batch ${allYields.length - batchYields.length + i + 1}`);
+        }
+
+        const n = allYields.length;
+        const mean = allYields.reduce((a, b) => a + b, 0) / n;
+        const variance = allYields.reduce((s, y) => s + Math.pow(y - mean, 2), 0) / n;
+        const sigma = Math.sqrt(variance);
+        const ucl = Math.min(parseFloat((mean + 3 * sigma).toFixed(1)), 100);
+        const lcl = Math.max(parseFloat((mean - 3 * sigma).toFixed(1)), 70);
+
+        // Update footer labels
+        const uclEl = document.getElementById('spc-ucl-label');
+        const meanEl = document.getElementById('spc-mean-label');
+        const lclEl = document.getElementById('spc-lcl-label');
+        if (uclEl) uclEl.textContent = ucl.toFixed(1) + '%';
+        if (meanEl) meanEl.textContent = mean.toFixed(1) + '%';
+        if (lclEl) lclEl.textContent = lcl.toFixed(1) + '%';
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Batch Yield %',
+                    data: batchYields,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                    borderWidth: lineWeight,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: batchYields.map(y => y < lcl ? activeDotSize : dotSize),
+                    pointBackgroundColor: batchYields.map(y => y < lcl ? '#ef4444' : '#10b981'),
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: isExpanded ? 3 : 2
+                }, {
+                    label: `UCL (${ucl.toFixed(1)}%)`,
+                    data: Array(labels.length).fill(ucl),
+                    borderColor: 'rgba(139,92,246,0.5)',
+                    borderDash: [4, 4],
+                    pointStyle: false,
+                    fill: false
+                }, {
+                    label: `Mean X̄ (${mean.toFixed(1)}%)`,
+                    data: Array(labels.length).fill(parseFloat(mean.toFixed(1))),
+                    borderColor: 'rgba(59,130,246,0.7)',
+                    borderDash: [8, 4],
+                    pointStyle: false,
+                    fill: false
+                }, {
+                    label: `LCL (${lcl.toFixed(1)}%)`,
+                    data: Array(labels.length).fill(lcl),
+                    borderColor: 'rgba(239,68,68,0.7)',
+                    borderWidth: isExpanded ? 4 : 2,
+                    borderDash: [6, 4],
+                    pointStyle: false,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 700 },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: 'rgba(255,255,255,0.7)',
+                            font: { size: fontSize, weight: '700' }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: Math.max(70, lcl - 5), max: 100,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: fontSize, weight: '700' } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: fontSize, weight: '700' } }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('SPC-only refresh failed:', e);
+    }
+}
+
+function updateBottleneckSummary() {
+    const list = document.getElementById('bottleneck-action-list');
+    if (!list) return;
+
+    const allUnits = Object.values(units);
+    const stageStats = {};
+    manufacturingStages.forEach(s => {
+        stageStats[s.name] = { passes: 0, fails: 0, name: s.name, order: s.order };
+    });
+
+    allUnits.forEach(u => {
+        u.history.forEach(h => {
+            if (stageStats[h.stage]) {
+                if (h.status === 'PASS') stageStats[h.stage].passes++;
+                else if (h.status === 'UNIT_REJECTED') stageStats[h.stage].fails++;
+            }
+        });
+    });
+
+    const bottlenecks = Object.values(stageStats)
+        .filter(s => {
+            const total = s.passes + s.fails;
+            if (total === 0) return false;
+            const fpy = (s.passes / total) * 100;
+            return fpy < 92;
+        })
+        .sort((a, b) => {
+            const fpyA = a.passes / (a.passes + a.fails);
+            const fpyB = b.passes / (b.passes + b.fails);
+            return fpyA - fpyB;
+        });
+
+    if (allUnits.length === 0) {
+        list.innerHTML = `<div class="text-center py-8">...</div>`;
+    } else if (bottlenecks.length === 0) {
+        list.innerHTML = `<div class="text-center py-8">...</div>`;
+    } else {
+        list.innerHTML = bottlenecks.map(s => {
+            const total = s.passes + s.fails;
+            const fpy = ((s.passes / total) * 100).toFixed(1);
+            const gap = (92 - parseFloat(fpy)).toFixed(1);
+            const color = parseFloat(fpy) < 80 ? 'var(--error)' : 'var(--warning)';
+            return `
+                <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:1rem; display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                    <div style="flex:1;">
+                        <div style="font-weight:800; font-size:0.82rem; color:${color};">${s.name}</div>
+                        <div style="font-size:0.62rem; color:var(--text-muted);">⚠️ ${s.fails} rejections | ${gap}% below target</div>
+                    </div>
+                    <div style="font-size:1.25rem; font-weight:900; color:${color};">${fpy}%</div>
+                </div>`;
+        }).join('');
+    }
+    lucide.createIcons();
 }
 
 function finalScrapUnit(sn) {
