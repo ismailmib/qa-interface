@@ -411,6 +411,7 @@ const templates = {
                     <p class="text-muted">High-density operational intelligence</p>
                 </div>
                 <div class="flex gap-3">
+                    <button class="btn btn-outline" style="border-color:var(--error); color:var(--error);" onclick="clearCurrentShiftData()"><i data-lucide="trash-2" style="width:18px"></i> Clear Shift Data</button>
                     <button class="btn btn-outline" onclick="showTransferData()"><i data-lucide="download" style="width:18px"></i> Export Ledger</button>
                     <button class="btn btn-primary" onclick="showStageManagement()"><i data-lucide="settings" style="width:18px"></i> Manage Workflow</button>
                 </div>
@@ -1831,10 +1832,43 @@ function updateAdminGauges() {
     const mrbInboxEl = document.getElementById('total-mrb-count');
     if (mrbInboxEl) mrbInboxEl.textContent = mrbCount;
 
-    // Live Shift Summary card
-    updateShiftSummaryCard();
-    // Urgent MRB Queue card
     updateQuickMRBList();
+    updateShiftSummaryCard();
+}
+
+/** 🗑️ MANUAL DATA PURGE: Wipes current session from local + cloud */
+async function clearCurrentShiftData() {
+    if (!confirm("⚠️ WARNING: This will PERMANENTLY WIPE all production units, yield data, and audit logs from both your browser and the FIREBASE CLOUD. This cannot be undone. \n\nAre you absolutely sure?")) return;
+
+    // 1. Wipe Memory
+    units = {};
+    yieldData = {
+        labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+        inspected: [0, 0, 0, 0, 0, 0, 0],
+        passed: [0, 0, 0, 0, 0, 0, 0],
+        scrapped: [0, 0, 0, 0, 0, 0, 0]
+    };
+    globalAuditLog = [];
+
+    // 2. Wipe Local Storage
+    localStorage.removeItem('units');
+    localStorage.removeItem('productionUnits');
+    localStorage.removeItem('yieldData');
+    localStorage.removeItem('globalAuditLog');
+
+    // 3. Wipe Cloud
+    if (cloudActive) {
+        showToast("🧼 Purging Cloud Data...", "info", 1500);
+        await persistUnits();
+        await persistYieldData();
+        await persistAudit();
+    }
+
+    // 4. Force Reload UI
+    updateAdminGauges();
+    updateAuditFeed();
+    updateStageHeatmap('stage-yield-heat-map');
+    showToast("✅ System Purged: All Shift Data Cleared.", "success");
 }
 
 function updateShiftSummaryCard() {
