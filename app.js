@@ -323,7 +323,7 @@ async function initSystemCloudSync() {
         showToast("✅ Real-Time Firebase Subscription Active", "success", 2000);
     } catch (e) {
         updateCloudStatus(false, 'SYNC ERROR');
-        showToast("⚠️ Cloud Connection Error - Using Local Legacy", "warning");
+        showToast("⚠️ Cloud Connection Error - Using Local Archive", "warning");
     }
 }
 
@@ -546,7 +546,7 @@ const templates = {
              <div class="view-header">
                 <div>
                     <h2 class="view-title-main">Deep-Dive Yield Intelligence</h2>
-                    <p class="text-muted">Analyzing current shift performance vs. manual era benchmarks</p>
+                    <p class="text-muted">Analyzing current shift performance vs. historical baseline benchmarks</p>
                 </div>
             </div>
 
@@ -557,9 +557,9 @@ const templates = {
                     <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;" id="kpi-fpy-sub">TARGET: 98.5%</div>
                  </div>
                  <div class="card glass">
-                    <div class="stat-label">Digital vs Legacy Gap</div>
+                    <div class="stat-label">Digital vs Baseline Gap</div>
                     <div class="stat-value" style="color:var(--primary)" id="kpi-gap-val">--</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% LEGACY AVG</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;">VS 87.1% BASELINE AVG</div>
                  </div>
                  <div class="card glass">
                     <div class="stat-label">MRB Pending Queue</div>
@@ -569,7 +569,7 @@ const templates = {
                  <div class="card glass">
                     <div class="stat-label">Live Scrap Rate</div>
                     <div class="stat-value" style="color:var(--accent)" id="kpi-scrap-val">--</div>
-                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;" id="kpi-scrap-sub">LEGACY BENCHMARK: 12.9%</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-top:0.5rem;" id="kpi-scrap-sub">BASELINE BENCHMARK: 12.9%</div>
                  </div>
             </div>
 
@@ -606,7 +606,7 @@ const templates = {
 
             <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; margin-top: 2rem;">
                 <div class="card glass">
-                    <h3 class="section-title-sm">6-Month Production Transformation (Legacy vs Digital)</h3>
+                    <h3 class="section-title-sm">6-Month Production Transformation (Baseline vs Digital)</h3>
                     <div style="height:250px; margin-top:1.5rem; position: relative;" id="trend-container">
                         <canvas id="monthly-trend-chart"></canvas>
                         <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
@@ -2032,7 +2032,7 @@ function updateAnalyticsSummary() {
 
     // ── KPI 4: Live Scrap Rate ────────────────────────────────────────────
     // Formula: (MRB_REVIEW + final SCRAP) / total × 100
-    // Compared against 12.9% — the average legacy scrap rate over 6 months.
+    // Compared against 12.9% — the average baseline scrap rate over 6 months.
     // A lower % = fewer units wasted = money saved.
     const legacyScrapRate = 12.9;
     const liveScrapRate = total > 0 ? ((mrbCount + scrapCount) / total) * 100 : null;
@@ -2043,8 +2043,8 @@ function updateAnalyticsSummary() {
     if (scrapSubEl) {
         const improvement = liveScrapRate !== null ? (legacyScrapRate - liveScrapRate).toFixed(1) : null;
         scrapSubEl.textContent = improvement !== null
-            ? (improvement >= 0 ? `↓ ${improvement}% BETTER THAN LEGACY` : `↑ ${Math.abs(improvement)}% WORSE THAN LEGACY`)
-            : 'LEGACY BENCHMARK: 12.9%';
+            ? (improvement >= 0 ? `↓ ${improvement}% BETTER THAN BASELINE` : `↑ ${Math.abs(improvement)}% WORSE THAN BASELINE`)
+            : 'BASELINE BENCHMARK: 12.9%';
     }
 }
 
@@ -2808,7 +2808,7 @@ function renderLedgerTable(filteredUnits, container) {
     const batches = {}, batchOrder = [];
     sorted.forEach(u => {
         const m = u.serial.match(/^(B\d{6})/);
-        const key = m ? m[1] : 'LEGACY';
+        const key = m ? m[1] : 'BASELINE';
         if (!batches[key]) { batches[key] = []; batchOrder.push(key); }
         batches[key].push(u);
     });
@@ -2869,8 +2869,8 @@ function renderLedgerTable(filteredUnits, container) {
 
         // Parse HH:MM:SS from key like B223527
         const h = key.slice(1, 3), mi = key.slice(3, 5), s = key.slice(5, 7);
-        const timeStr = key !== 'LEGACY' ? `${h}:${mi}:${s}` : '';
-        const batchLabel = key !== 'LEGACY' ? key : 'Legacy / Manual Entries';
+        const timeStr = key !== 'BASELINE' ? `${h}:${mi}:${s}` : '';
+        const batchLabel = key !== 'BASELINE' ? key : 'Historical / Baseline Entries';
 
         const rows = bUnits.map(u => `
             <tr style="${rowBg(u)}">
@@ -3251,7 +3251,7 @@ function renderExecutiveCharts() {
                 // first render only
                 destroyIfExists('monthly-trend-chart');
 
-                // Unit counts for each legacy month (totalFG / inventoryPlan from legacyManualPerformance)
+                // Unit counts for each baseline month (totalFG / inventoryPlan from legacyManualPerformance)
                 const legacyPlan = legacyManualPerformance.inventoryPlan; // 3000
                 const legacyUnitsPassed = legacyManualPerformance.months.map(m =>
                     legacyManualPerformance.data[m].totalFG
@@ -3261,7 +3261,7 @@ function renderExecutiveCharts() {
                 const digitalPassed = yieldData.passed.reduce((a, b) => a + b, 0);
                 const digitalTotal = yieldData.inspected.reduce((a, b) => a + b, 0);
 
-                // For tooltip: units per bar slot (7 slots: 6 legacy + 1 digital)
+                // For tooltip: units per bar slot (7 slots: 6 baseline + 1 digital)
                 const unitCountsLegacy = [...legacyUnitsPassed, null];
                 const unitCountsDigital = [null, null, null, null, null, null, digitalPassed];
                 const totalPerSlot = [...Array(6).fill(legacyPlan), digitalTotal || legacyPlan];
@@ -3299,7 +3299,7 @@ function renderExecutiveCharts() {
                     data: {
                         labels: ["Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26", "Current"],
                         datasets: [{
-                            label: 'Legacy Manual Yield %',
+                            label: 'Historical Baseline Yield %',
                             data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
                             backgroundColor: 'rgba(255,255,255,0.07)',
                             borderColor: 'rgba(255,255,255,0.15)',
