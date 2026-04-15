@@ -423,7 +423,7 @@ const templates = {
                 <div class="card glass flex flex-col justify-between" style="padding: 2rem; border-bottom: 4px solid var(--success);">
                     <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Live First-Pass Yield</div>
                     <!-- Gauge -->
-                    <div style="display:flex; justify-content:center; margin-bottom: 1rem;">
+                    <div style="display:flex; justify-content:center; margin-bottom: 1.25rem;">
                         <div style="position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center;">
                             <svg viewBox="0 0 100 100" style="width: 100%; transform: rotate(-90deg);">
                                 <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
@@ -436,19 +436,19 @@ const templates = {
                             </div>
                         </div>
                     </div>
-                    <!-- Supplementary stats -->
-                    <div style="display:flex; flex-direction:column; gap:0.4rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15);">
-                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Units Passed</span>
-                            <span style="font-size:0.95rem; font-weight:900; color:var(--success);" id="fpy-passed-count">0</span>
+                    <!-- Target vs Actual — unique info, not repeated elsewhere -->
+                    <div style="border-top: 1px solid var(--border); padding-top: 1rem; display:flex; flex-direction:column; gap:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">🎯 Target FPY</span>
+                            <span style="font-size:0.85rem; font-weight:900; color:var(--success);">98.5%</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);">
-                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Units Failed / MRB</span>
-                            <span style="font-size:0.95rem; font-weight:900; color:var(--error);" id="fpy-failed-count">0</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">📉 Gap to Target</span>
+                            <span style="font-size:0.85rem; font-weight:900; color:var(--warning);" id="fpy-gap-val">--</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.15);">
-                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Total Inspected</span>
-                            <span style="font-size:0.95rem; font-weight:900; color:var(--primary);" id="fpy-total-count">0</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">📋 Historical Baseline</span>
+                            <span style="font-size:0.85rem; font-weight:900; color:var(--text-muted);">87.1%</span>
                         </div>
                     </div>
                 </div>
@@ -465,19 +465,19 @@ const templates = {
                             <div style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); box-shadow: 0 0 15px var(--primary-glow); transition: width 0.8s ease;" id="shift-progress-fill"></div>
                         </div>
                     </div>
-                    <!-- Inline breakdown mini-stats -->
-                    <div style="display:flex; flex-direction:column; gap:0.4rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15);">
-                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">✅ Passed</span>
-                            <span style="font-size:0.95rem; font-weight:900; color:var(--success);" id="shift-mini-pass">0</span>
+                    <!-- Unique production KPIs — not repeated in other cards -->
+                    <div style="border-top: 1px solid var(--border); padding-top: 1rem; display:flex; flex-direction:column; gap:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">⏱ Shift Duration</span>
+                            <span style="font-size:0.85rem; font-weight:900; color:var(--primary);" id="shift-duration-inline">--</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.15);">
-                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">🔵 In Progress</span>
-                            <span style="font-size:0.95rem; font-weight:900; color:var(--primary);" id="shift-mini-wip">0</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">📦 Batches Run</span>
+                            <span style="font-size:0.85rem; font-weight:900; color:var(--text-main);" id="shift-batches-inline">--</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);">
-                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">🔴 MRB / Issues</span>
-                            <span style="font-size:0.95rem; font-weight:900; color:var(--error);" id="shift-mini-mrb">0</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">⚡ Throughput Rate</span>
+                            <span style="font-size:0.85rem; font-weight:900; color:var(--accent);" id="shift-rate-inline">-- u/hr</span>
                         </div>
                     </div>
                 </div>
@@ -2021,24 +2021,30 @@ function updateShiftSummaryCard() {
     const firstBatch = sortedBatches[0];
     let startTimeStr = 'No data';
     let durationStr = '--';
+    let durationMs = 0;
 
     if (firstBatch) {
-        // Use the actual locale time string stored in the first unit of this batch
         const firstUnit = allUnits.find(u => u.serial.startsWith(firstBatch));
         startTimeStr = firstUnit?.history?.[0]?.time || '--';
 
-        // Duration: parse HHMMSS from batch key vs now
         const h = parseInt(firstBatch.slice(1, 3));
         const mi = parseInt(firstBatch.slice(3, 5));
         const s = parseInt(firstBatch.slice(5, 7));
         const now = new Date();
         const startMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s).getTime();
-        const diffMs = now.getTime() - startMs;
-        if (diffMs >= 0) {
-            const mm = Math.floor(diffMs / 60000);
-            const ss = Math.floor((diffMs % 60000) / 1000);
+        durationMs = now.getTime() - startMs;
+        if (durationMs >= 0) {
+            const mm = Math.floor(durationMs / 60000);
+            const ss = Math.floor((durationMs % 60000) / 1000);
             durationStr = mm > 0 ? `${mm}m ${ss}s` : `${ss}s`;
         }
+    }
+
+    // ── Throughput rate (units per hour) ─────────────────────────────────
+    let rateStr = '-- u/hr';
+    if (durationMs > 0 && total > 0) {
+        const hrs = durationMs / 3600000;
+        rateStr = `${Math.round(total / hrs)} u/hr`;
     }
 
     // ── Update DOM ───────────────────────────────────────────────────────
@@ -2050,14 +2056,28 @@ function updateShiftSummaryCard() {
     set('shift-fpy-card-val', fpy + '%');
     set('shift-mrb-card-val', mrb > 0 ? mrb + ' units' : '✅ Clear');
 
-    // Colour-code FPY
+    // ── Populate unique fields in top 3 cards ────────────────────────────
+    // FPY card: gap to target
+    const gap = (98.5 - parseFloat(fpy)).toFixed(1);
+    const gapEl = document.getElementById('fpy-gap-val');
+    if (gapEl) {
+        gapEl.textContent = parseFloat(gap) <= 0 ? '✅ On Target' : `-${gap}%`;
+        gapEl.style.color = parseFloat(gap) <= 0 ? 'var(--success)' : parseFloat(gap) < 5 ? 'var(--warning)' : 'var(--error)';
+    }
+    // Shift card: duration, batches, rate
+    set('shift-duration-inline', durationStr);
+    set('shift-batches-inline', batchKeys.size > 0 ? `${batchKeys.size}` : '--');
+    set('shift-rate-inline', rateStr);
+
+    // Colour-code FPY sidebar card
     const fpyEl = document.getElementById('shift-fpy-card-val');
     if (fpyEl) fpyEl.style.color = parseFloat(fpy) >= 98.5 ? 'var(--success)' : parseFloat(fpy) >= 92 ? 'var(--warning)' : 'var(--error)';
 
-    // Colour-code MRB
+    // Colour-code MRB sidebar card
     const mrbEl = document.getElementById('shift-mrb-card-val');
     if (mrbEl) mrbEl.style.color = mrb === 0 ? 'var(--success)' : mrb < 5 ? 'var(--warning)' : 'var(--error)';
 }
+
 
 function updateQuickMRBList() {
     const listEl = document.getElementById('quick-mrb-list');
