@@ -22,52 +22,78 @@
 
     <!-- 🔐 Premium Login Screen -->
     <div id="screen-login" class="login-screen">
-        <div class="login-container glass">
-            <img src="qa_system_logo.png" alt="Logo" class="login-logo">
-            <h1 class="login-title">Factory Intelligence</h1>
-            <p class="login-subtitle">Quality Assurance Management System v2.0</p>
-            <div id="login-cloud-status" class="flex justify-center items-center gap-2"
-                style="margin-top: 1rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">
-                <div class="status-dot-pulse" style="width: 8px; height: 8px; background: var(--text-muted);"
-                    id="login-cloud-dot"></div>
-                <span id="login-cloud-text">CONNECTING TO FIREBASE...</span>
+        <!-- Floating Decorative Elements -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-primary rounded-full blur-[120px] opacity-20"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent rounded-full blur-[150px] opacity-20"></div>
+        </div>
+
+        <div class="login-container glass animate-fade">
+            <div class="login-header">
+                <div class="logo-wrapper">
+                    <img src="qa_system_logo.png" alt="Logo" class="login-logo">
+                    <div class="logo-glow"></div>
+                </div>
+                <h1 class="login-title">Factory Intelligence</h1>
+                <p class="login-subtitle">Quality Assurance Management System v4.6</p>
             </div>
 
-            <div class="flex flex-col gap-4 text-left">
+            <div id="login-cloud-status" class="flex justify-center items-center gap-2"
+                style="margin-bottom: 2rem; font-size: 0.7rem; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 0.5rem 1rem; border-radius: 100px; border: 1px solid var(--border);">
+                <div class="status-dot-pulse" style="width: 8px; height: 8px; background: var(--text-muted);"
+                    id="login-cloud-dot"></div>
+                <span id="login-cloud-text" style="letter-spacing: 0.05em;">ESTABLISHING SECURE GATEWAY...</span>
+            </div>
+
+            <div class="flex flex-col gap-6 text-left">
                 <div class="form-group">
-                    <label class="form-label">Access ID</label>
-                    <input type="text" id="login-access-id" placeholder="Enter employee ID"
-                        onkeyup="if(event.key === 'Enter') handleLogin()">
+                    <label class="form-label">Personnel Access ID</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="user" class="input-icon"></i>
+                        <input type="text" id="login-access-id" placeholder="Enter employee ID"
+                            onkeyup="if(event.key === 'Enter') handleLogin()">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Passcode</label>
-                    <input type="password" id="login-passcode" placeholder="••••••••"
-                        onkeyup="if(event.key === 'Enter') handleLogin()">
+                    <label class="form-label">Security Passcode</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock" class="input-icon"></i>
+                        <input type="password" id="login-passcode" placeholder="••••••••"
+                            onkeyup="if(event.key === 'Enter') handleLogin()">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Operation Role</label>
-                    <select id="login-role">
-                        <option value="admin">Quality Assurance Manager / Admin</option>
-                        <option value="operator">Production Line Operator</option>
-                    </select>
+                    <label class="form-label">Operational Role</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="shield" class="input-icon"></i>
+                        <select id="login-role">
+                            <option value="admin">Quality Manager / Administrator</option>
+                            <option value="operator">Production Line Operator</option>
+                        </select>
+                    </div>
                 </div>
 
-                <button class="btn btn-primary w-full justify-center" style="margin-top: 1rem;" onclick="handleLogin()">
-                    Initialize Session
-                    <i data-lucide="zap" style="width: 18px;"></i>
+                <button class="btn btn-primary w-full justify-center" style="margin-top: 0.5rem;"
+                    onclick="handleLogin()">
+                    Initialize Secure Session
+                    <i data-lucide="arrow-right-circle" style="width: 18px;"></i>
                 </button>
 
                 <div class="badge-recognition-section">
-                    <p class="badge-label">SECURE BADGE RECOGNITION</p>
+                    <p class="badge-label">BIOMETRIC / RFID RECOGNITION</p>
                     <button class="btn btn-outline w-full justify-center" id="badge-btn" onclick="simulateBadgeScan()">
                         <i data-lucide="scan-barcode" style="width: 20px;"></i>
-                        Scan Personnel RFID
+                        Scan Personnel Badge
                     </button>
-                    <p class="text-muted text-center" style="font-size: 0.65rem; margin-top: 1.5rem; cursor: pointer;"
-                        onclick="seedCloudData()">
-                        New Project? <span style="color: var(--primary); text-decoration: underline;">Sync Local
-                            Defaults to Cloud</span>
-                    </p>
+                    <div class="flex justify-between items-center" style="margin-top: 2rem;">
+                        <p class="text-muted"
+                            style="font-size: 0.65rem; cursor: pointer; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;"
+                            onclick="seedCloudData()">
+                            <span style="color: var(--primary);">Initialize</span> Cloud Sync
+                        </p>
+                        <p class="text-muted" style="font-size: 0.65rem; font-weight: 700;">SYSTEM: <span
+                                style="color: var(--success);">ONLINE</span></p>
+                    </div>
                 </div>
             </div>
         </div>

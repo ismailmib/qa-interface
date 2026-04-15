@@ -862,6 +862,33 @@ const templates = {
 
 
 // 🛠️ Functions
+function simulateBadgeScan() {
+    const btn = document.getElementById('badge-btn');
+    const originalContent = btn.innerHTML;
+
+    btn.classList.add('scanning');
+    btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 20px;"></i> RECOGNIZING BIOMETRICS...`;
+    lucide.createIcons();
+
+    setTimeout(() => {
+        btn.classList.remove('scanning');
+        btn.innerHTML = `<i data-lucide="check-circle" style="width: 20px;"></i> EMPLOYEE AUTHENTICATED`;
+        btn.style.borderColor = 'var(--success)';
+        btn.style.color = 'var(--success)';
+        lucide.createIcons();
+
+        showToast("Biometric Recognition Successful", "Welcome back, Operator", "success");
+
+        setTimeout(() => {
+            // Auto-login as operator for demo
+            document.getElementById('login-access-id').value = "EMP-808";
+            document.getElementById('login-passcode').value = "8800";
+            document.getElementById('login-role').value = "operator";
+            handleLogin();
+        }, 1200);
+    }, 2500);
+}
+
 function handleLogin() {
     const accessId = document.getElementById('login-access-id').value;
     const pass = document.getElementById('login-passcode').value;
