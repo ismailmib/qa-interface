@@ -452,9 +452,52 @@ const templates = {
                 <!-- MRB STATUS ALERT -->
                 <div class="card glass flex flex-col justify-between" style="padding: 2rem; border-bottom: 4px solid var(--error);">
                     <div>
-                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">MRB Quality Inbox</div>
-                        <div style="font-size: 3rem; font-weight: 900; line-height: 1; color: var(--error);" id="total-mrb-count">0</div>
-                        <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem; font-weight: 600;">UNITS AWAITING YOUR DECISION</p>
+                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1.25rem;">Quality Inbox Breakdown</div>
+
+                        <!-- MRB Pending (Hero) -->
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.65rem 0.85rem; border-radius: 8px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); margin-bottom: 0.5rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--error); box-shadow: 0 0 8px var(--error);"></div>
+                                <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">MRB Pending Decision</span>
+                            </div>
+                            <span style="font-size:1.4rem; font-weight:900; color:var(--error); line-height:1;" id="total-mrb-count">0</span>
+                        </div>
+
+                        <!-- WIP -->
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15); margin-bottom: 0.5rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--primary);"></div>
+                                <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Work In Progress (WIP)</span>
+                            </div>
+                            <span style="font-size:1.4rem; font-weight:900; color:var(--primary); line-height:1;" id="inbox-wip-count">0</span>
+                        </div>
+
+                        <!-- Scrap -->
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.15); margin-bottom: 0.5rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></div>
+                                <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Scrapped Units</span>
+                            </div>
+                            <span style="font-size:1.4rem; font-weight:900; color:var(--warning); line-height:1;" id="inbox-scrap-count">0</span>
+                        </div>
+
+                        <!-- Rework -->
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.15); margin-bottom: 0.5rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--accent);"></div>
+                                <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Authorized Rework</span>
+                            </div>
+                            <span style="font-size:1.4rem; font-weight:900; color:var(--accent); line-height:1;" id="inbox-rework-count">0</span>
+                        </div>
+
+                        <!-- Passed -->
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.15); margin-bottom: 1rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--success);"></div>
+                                <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Passed / Completed</span>
+                            </div>
+                            <span style="font-size:1.4rem; font-weight:900; color:var(--success); line-height:1;" id="inbox-passed-count">0</span>
+                        </div>
                     </div>
                      <button class="btn btn-primary" onclick="goToMRB()" style="background: var(--error); border:none; width: 100%; justify-content: center; gap: 8px;">
                          <i data-lucide="alert-circle" style="width:16px;"></i> Action Decision Inbox
@@ -1827,6 +1870,9 @@ function updateAdminGauges() {
     const allUnits = Object.values(units);
     const shiftPass = allUnits.filter(u => u.status === 'COMPLETED').length;
     const mrbCount = allUnits.filter(u => u.status === 'MRB_REVIEW').length;
+    const wipCount = allUnits.filter(u => u.status === 'IN_PROGRESS' || u.status === 'WIP').length;
+    const scrapCount = allUnits.filter(u => u.status === 'UNIT_REJECTED').length;
+    const reworkCount = allUnits.filter(u => u.status === 'REWORK').length;
     const totalProcessed = allUnits.length;
 
     // ✅ FPY: passed / totalProcessed (cumulative, all batches)
@@ -1855,9 +1901,19 @@ function updateAdminGauges() {
     const fill = document.getElementById('shift-progress-fill');
     if (fill) fill.style.width = `${Math.min(passPercent, 100)}%`;
 
-    // MRB Inbox counter
+    // MRB Inbox counter (hero number)
     const mrbInboxEl = document.getElementById('total-mrb-count');
     if (mrbInboxEl) mrbInboxEl.textContent = mrbCount;
+
+    // ✅ Quality Inbox breakdown — all unit statuses
+    const wipEl = document.getElementById('inbox-wip-count');
+    const scrapEl = document.getElementById('inbox-scrap-count');
+    const reworkEl = document.getElementById('inbox-rework-count');
+    const passedEl = document.getElementById('inbox-passed-count');
+    if (wipEl) wipEl.textContent = wipCount;
+    if (scrapEl) scrapEl.textContent = scrapCount;
+    if (reworkEl) reworkEl.textContent = reworkCount;
+    if (passedEl) passedEl.textContent = shiftPass;
 
     updateQuickMRBList();
     updateShiftSummaryCard();
