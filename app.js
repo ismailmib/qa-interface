@@ -418,19 +418,37 @@ const templates = {
             </div>
 
             <!-- 🪐 THE BIG THREE: ACTIONABLE OVERVIEW -->
-            <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+            <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem; align-items: stretch;">
                 <!-- LIVE FPY GAUGE -->
-                <div class="card glass text-center flex flex-col items-center justify-center" style="padding: 2rem; border-bottom: 4px solid var(--success);">
+                <div class="card glass flex flex-col justify-between" style="padding: 2rem; border-bottom: 4px solid var(--success);">
                     <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Live First-Pass Yield</div>
-                    <div style="position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center;">
-                        <svg viewBox="0 0 100 100" style="width: 100%; transform: rotate(-90deg);">
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
-                            <circle id="fpy-gauge-circle" cx="50" cy="50" r="45" fill="none" stroke="var(--success)" stroke-width="8" 
-                                    stroke-dasharray="282.7" stroke-dashoffset="15" style="filter: drop-shadow(0 0 8px var(--success));"></circle>
-                        </svg>
-                        <div style="position: absolute; text-align: center;">
-                            <div style="font-size: 2.5rem; font-weight: 900; line-height: 1;" id="live-fpy-val">--%</div>
-                            <div class="text-muted" style="font-size: 0.6rem; font-weight: 800;">CURRENT YIELD</div>
+                    <!-- Gauge -->
+                    <div style="display:flex; justify-content:center; margin-bottom: 1rem;">
+                        <div style="position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center;">
+                            <svg viewBox="0 0 100 100" style="width: 100%; transform: rotate(-90deg);">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
+                                <circle id="fpy-gauge-circle" cx="50" cy="50" r="45" fill="none" stroke="var(--success)" stroke-width="8"
+                                        stroke-dasharray="282.7" stroke-dashoffset="15" style="filter: drop-shadow(0 0 8px var(--success)); transition: stroke-dashoffset 0.8s ease;"></circle>
+                            </svg>
+                            <div style="position: absolute; text-align: center;">
+                                <div style="font-size: 2.5rem; font-weight: 900; line-height: 1;" id="live-fpy-val">--%</div>
+                                <div class="text-muted" style="font-size: 0.6rem; font-weight: 800;">CURRENT YIELD</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Supplementary stats -->
+                    <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15);">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Units Passed</span>
+                            <span style="font-size:0.95rem; font-weight:900; color:var(--success);" id="fpy-passed-count">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Units Failed / MRB</span>
+                            <span style="font-size:0.95rem; font-weight:900; color:var(--error);" id="fpy-failed-count">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.15);">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Total Inspected</span>
+                            <span style="font-size:0.95rem; font-weight:900; color:var(--primary);" id="fpy-total-count">0</span>
                         </div>
                     </div>
                 </div>
@@ -439,13 +457,28 @@ const templates = {
                 <div class="card glass flex flex-col justify-between" style="padding: 2rem; border-bottom: 4px solid var(--primary);">
                     <div>
                         <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Shift Production Progress</div>
-                        <div class="flex justify-between items-end" style="margin-bottom: 1rem;">
+                        <div class="flex justify-between items-end" style="margin-bottom: 0.75rem;">
                             <div style="font-size: 3rem; font-weight: 900; line-height: 1;"><span id="total-shift-pass">0</span><span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;"> / <span id="total-shift-processed">0</span> UNITS</span></div>
                             <div style="font-weight: 800; color: var(--primary);" id="shift-perc-label">0%</div>
                         </div>
+                        <div class="progress-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; margin-bottom: 1.25rem;">
+                            <div style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); box-shadow: 0 0 15px var(--primary-glow); transition: width 0.8s ease;" id="shift-progress-fill"></div>
+                        </div>
                     </div>
-                    <div class="progress-bar-container" style="width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden;">
-                        <div style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); box-shadow: 0 0 15px var(--primary-glow);" id="shift-progress-fill"></div>
+                    <!-- Inline breakdown mini-stats -->
+                    <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15);">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">✅ Passed</span>
+                            <span style="font-size:0.95rem; font-weight:900; color:var(--success);" id="shift-mini-pass">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.15);">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">🔵 In Progress</span>
+                            <span style="font-size:0.95rem; font-weight:900; color:var(--primary);" id="shift-mini-wip">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.75rem; border-radius:6px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);">
+                            <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">🔴 MRB / Issues</span>
+                            <span style="font-size:0.95rem; font-weight:900; color:var(--error);" id="shift-mini-mrb">0</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1915,6 +1948,22 @@ function updateAdminGauges() {
     if (reworkEl) reworkEl.textContent = reworkCount;
     if (passedEl) passedEl.textContent = shiftPass;
 
+    // ✅ FPY card supplementary stats
+    const fpyPassedEl = document.getElementById('fpy-passed-count');
+    const fpyFailedEl = document.getElementById('fpy-failed-count');
+    const fpyTotalEl = document.getElementById('fpy-total-count');
+    if (fpyPassedEl) fpyPassedEl.textContent = shiftPass;
+    if (fpyFailedEl) fpyFailedEl.textContent = mrbCount + scrapCount + reworkCount;
+    if (fpyTotalEl) fpyTotalEl.textContent = totalProcessed;
+
+    // ✅ Shift card mini-breakdown
+    const miniPassEl = document.getElementById('shift-mini-pass');
+    const miniWipEl = document.getElementById('shift-mini-wip');
+    const miniMrbEl = document.getElementById('shift-mini-mrb');
+    if (miniPassEl) miniPassEl.textContent = shiftPass;
+    if (miniWipEl) miniWipEl.textContent = wipCount;
+    if (miniMrbEl) miniMrbEl.textContent = mrbCount + scrapCount;
+
     updateQuickMRBList();
     updateShiftSummaryCard();
 }
@@ -2597,6 +2646,7 @@ function authorizeRework(sn) {
     persistUnits();
     pushAudit("MRB_REWORK", `Unit ${sn} authorized for rework by ${currentUser.name}`);
     showToast(`Unit ${sn} authorized for Rework. Operator can now scan it.`, "success");
+    updateAdminGauges(); // 🔄 Refresh inbox card immediately
     runLiveFilter();
 }
 
@@ -2616,6 +2666,7 @@ function confirmFinalScrap(sn) {
     persistUnits();
     pushAudit("MRB_FINAL_SCRAP", `Unit ${sn} permanently scrapped by ${currentUser.name}`);
     showToast(`Unit ${sn} permanently removed from production.`, "error");
+    updateAdminGauges(); // 🔄 Refresh inbox card immediately
     runLiveFilter();
 }
 
