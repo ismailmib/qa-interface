@@ -22,30 +22,25 @@
 
     <!-- 🔐 Premium Login Screen -->
     <div id="screen-login" class="login-screen">
-        <!-- Floating Decorative Elements -->
-        <div class="absolute inset-0 overflow-hidden pointer-events-none">
-            <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-primary rounded-full blur-[120px] opacity-20"></div>
-            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent rounded-full blur-[150px] opacity-20"></div>
-        </div>
+        <div class="login-container animate-fade">
 
-        <div class="login-container glass animate-fade">
+            <!-- Header row: Logo left, Cloud Status right -->
             <div class="login-header">
-                <div class="logo-wrapper">
-                    <img src="qa_system_logo.png" alt="Logo" class="login-logo">
-                    <div class="logo-glow"></div>
+                <div class="flex items-center justify-between" style="margin-bottom: 1.5rem;">
+                    <div class="logo-wrapper">
+                        <img src="qa_system_logo.png" alt="Logo" class="login-logo">
+                    </div>
+                    <div id="login-cloud-status" class="flex items-center gap-2"
+                        style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.04); padding: 0.4rem 0.85rem; border-radius: 100px; border: 1px solid var(--border);">
+                        <div class="status-dot-pulse" style="width: 7px; height: 7px;" id="login-cloud-dot"></div>
+                        <span id="login-cloud-text" style="letter-spacing: 0.05em;">CONNECTING...</span>
+                    </div>
                 </div>
                 <h1 class="login-title">Factory Intelligence</h1>
                 <p class="login-subtitle">Quality Assurance Management System v4.6</p>
             </div>
 
-            <div id="login-cloud-status" class="flex justify-center items-center gap-2"
-                style="margin-bottom: 2rem; font-size: 0.7rem; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 0.5rem 1rem; border-radius: 100px; border: 1px solid var(--border);">
-                <div class="status-dot-pulse" style="width: 8px; height: 8px; background: var(--text-muted);"
-                    id="login-cloud-dot"></div>
-                <span id="login-cloud-text" style="letter-spacing: 0.05em;">ESTABLISHING SECURE GATEWAY...</span>
-            </div>
-
-            <div class="flex flex-col gap-6 text-left">
+            <div class="flex flex-col gap-4 text-left">
                 <div class="form-group">
                     <label class="form-label">Personnel Access ID</label>
                     <div class="input-wrapper">

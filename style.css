@@ -279,61 +279,51 @@ h3,
 
 /* 🧩 Component Specific Styles */
 .login-logo {
-    width: 120px;
-    height: 120px;
-    object-fit: cover;
-    border-radius: 24px;
+    width: 80px;
+    height: 56px;
+    object-fit: contain;
+    border-radius: 6px;
     position: relative;
     z-index: 2;
-    margin: 0 auto;
     display: block;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    /* no border */
+    border: none;
+    filter: none;
 }
 
 .logo-wrapper {
     position: relative;
-    margin-bottom: 2rem;
-    display: inline-block;
+    margin-bottom: 1.5rem;
+    display: block;
 }
 
 .logo-glow {
-    position: absolute;
-    inset: -10px;
-    background: var(--primary);
-    filter: blur(40px);
-    opacity: 0.4;
-    border-radius: 50%;
-    z-index: 1;
-    animation: pulse-glow 3s infinite alternate;
-}
-
-@keyframes pulse-glow {
-    from {
-        transform: scale(0.8);
-        opacity: 0.3;
-    }
-
-    to {
-        transform: scale(1.1);
-        opacity: 0.5;
-    }
+    display: none;
+    /* No glow on flat layout */
 }
 
 .login-title {
-    font-size: 2.75rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.04em;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    color: #fff;
+    background: none;
+    -webkit-text-fill-color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 .login-subtitle {
     color: var(--text-muted);
-    margin-bottom: 2.5rem;
-    font-weight: 500;
+    margin-bottom: 0;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.login-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
 }
 
 .form-group {
@@ -591,75 +581,87 @@ h3,
 
 /* Login Screen */
 .login-screen {
-    height: 100vh;
+    min-height: 100dvh;
+    /* Use dvh for mobile/desktop compatibility */
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at top right, #1e1b4b, transparent),
-        radial-gradient(circle at bottom left, #1e1b4b, transparent),
+    padding: clamp(1rem, 4vw, 3rem);
+    /* Breathing room on all sides */
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
         var(--background);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .login-screen::before {
     content: '';
     position: absolute;
-    width: 200%;
-    height: 200%;
+    inset: 0;
     background-image:
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 50px 50px;
-    transform: perspective(500px) rotateX(60deg) translateY(-200px);
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
     z-index: 1;
-    opacity: 0.3;
+    opacity: 1;
 }
 
 .login-screen::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+    background: radial-gradient(circle at center, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.7) 100%);
 }
 
+/* Square login card - Oracle-style layout */
 .login-container {
     position: relative;
     z-index: 10;
-    width: 100%;
-    max-width: 480px;
-    padding: 3.5rem;
-    border-radius: var(--radius-lg);
-    text-align: center;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--glass-border);
-    animation: login-appear 1s cubic-bezier(0.2, 0.8, 0.2, 1);
-    overflow: hidden;
+    width: min(520px, 100%);
+    /* Never wider than 520px, shrinks on small screens */
+    max-height: calc(100dvh - 4rem);
+    /* Never taller than the viewport */
+    overflow-y: auto;
+    /* Scroll inside the card if content overflows */
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3.5rem);
+    border-radius: 6px;
+    text-align: left;
+    background: rgba(10, 15, 30, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow:
+        0 0 0 1px rgba(99, 102, 241, 0.2),
+        0 25px 60px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-top: 3px solid var(--primary);
+    animation: login-appear 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    overflow-x: hidden;
 }
 
 .login-container::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at center, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.06) 0%, transparent 100%);
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
 }
 
 @keyframes login-appear {
     from {
         opacity: 0;
-        transform: translateY(30px) scale(0.95);
-        backdrop-filter: blur(0px);
+        transform: translateY(24px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
-        backdrop-filter: blur(12px);
+        transform: translateY(0);
     }
 }
 
@@ -1258,5 +1260,125 @@ h1 {
         transform: translateX(20px);
         opacity: 0;
         visibility: hidden;
+    }
+}
+
+/* ============================================================
+   📐 RESPONSIVE LOGIN — Fits all screen sizes
+   ============================================================ */
+
+/* Very small screens / phones (< 480px) */
+@media (max-width: 480px) {
+    .login-screen {
+        padding: 1rem;
+        align-items: flex-start;
+        padding-top: 2rem;
+    }
+
+    .login-container {
+        width: 100%;
+        border-radius: 10px;
+        border-top-width: 2px;
+        max-height: none;
+    }
+
+    .login-logo {
+        width: 56px;
+        height: 40px;
+    }
+
+    .login-title {
+        font-size: 1.5rem;
+    }
+
+    .login-subtitle {
+        font-size: 0.75rem;
+    }
+}
+
+/* Tablets / small laptops (480px – 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .login-container {
+        width: min(480px, 100%);
+    }
+}
+
+/* Standard laptops (769px – 1280px) — default styles apply */
+
+/* Large monitors / 1440p (> 1280px) */
+@media (min-width: 1280px) {
+    .login-container {
+        width: 520px;
+        /* Fixed comfortable width on large screens */
+    }
+
+    .login-title {
+        font-size: 2.25rem;
+    }
+}
+
+/* Ultra-wide / 4K monitors (> 1920px) */
+@media (min-width: 1920px) {
+    .login-container {
+        width: 560px;
+        padding: 3.5rem 4rem;
+    }
+
+    .login-title {
+        font-size: 2.5rem;
+    }
+
+    .login-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+    }
+
+    .btn {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+    }
+}
+
+/* Short viewport height (e.g., landscape on laptop 900px height) */
+@media (max-height: 700px) {
+    .login-screen {
+        align-items: flex-start;
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .login-header {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .login-logo {
+        width: 60px;
+        height: 42px;
+    }
+
+    .login-title {
+        font-size: 1.6rem;
+    }
+
+    .form-group {
+        margin-bottom: 0.75rem;
+    }
+
+    input,
+    select {
+        padding: 0.65rem 1rem;
+    }
+
+    .badge-recognition-section {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+    }
+
+    .btn {
+        padding: 0.65rem 1.5rem;
     }
 }
