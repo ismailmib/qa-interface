@@ -1903,10 +1903,14 @@ function updateAdminGauges() {
     const allUnits = Object.values(units);
     const shiftPass = allUnits.filter(u => u.status === 'COMPLETED').length;
     const mrbCount = allUnits.filter(u => u.status === 'MRB_REVIEW').length;
-    const wipCount = allUnits.filter(u => u.status === 'IN_PROGRESS' || u.status === 'WIP').length;
-    const scrapCount = allUnits.filter(u => u.status === 'UNIT_REJECTED').length;
-    const reworkCount = allUnits.filter(u => u.status === 'REWORK').length;
+    // ✅ FIX: scrap status is "SCRAP" (not "UNIT_REJECTED")
+    const scrapCount = allUnits.filter(u => u.status === 'SCRAP').length;
+    // ✅ FIX: rework units go back to "IN_PROGRESS" with isRework=true (no "REWORK" status exists)
+    const reworkCount = allUnits.filter(u => u.isRework === true && u.status !== 'COMPLETED').length;
+    // ✅ FIX: WIP = IN_PROGRESS but NOT rework (to avoid double-counting)
+    const wipCount = allUnits.filter(u => u.status === 'IN_PROGRESS' && !u.isRework).length;
     const totalProcessed = allUnits.length;
+
 
     // ✅ FPY: passed / totalProcessed (cumulative, all batches)
     const fpy = totalProcessed > 0 ? ((shiftPass / totalProcessed) * 100).toFixed(1) : "0";
