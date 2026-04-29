@@ -714,7 +714,7 @@ const templates = {
                     </div>
                     <div style="height:300px; position: relative; cursor: pointer;" id="spc-container" onclick="toggleExpandCard('card-spc', 'spc-container')" title="Click to expand chart">
                         <canvas id="spc-yield-chart"></canvas>
-                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
+                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:var(--card-bg-subtle); border-radius:12px;">ENGINE INITIALIZING...</div>
                     </div>
                     <div class="flex justify-between items-center" style="margin-top: 1rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">
                         <span>UPPER CONTROL LIMIT: <span style="color:var(--error)" id="spc-ucl-label">--</span></span>
@@ -737,7 +737,7 @@ const templates = {
                     <h3 class="section-title-sm">6-Month Production Transformation (Baseline vs Digital)</h3>
                     <div style="height:250px; margin-top:1.5rem; position: relative;" id="trend-container">
                         <canvas id="monthly-trend-chart"></canvas>
-                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">ENGINE INITIALIZING...</div>
+                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:var(--card-bg-subtle); border-radius:12px;">ENGINE INITIALIZING...</div>
                     </div>
                 </div>
 
@@ -746,7 +746,7 @@ const templates = {
                     <p class="text-muted" style="font-size:0.65rem; margin-bottom: 0.5rem;">Ranked by total MRB rejections. Top bar = biggest bottleneck.</p>
                     <div style="height:250px; margin-top:0.5rem; position: relative;" id="pareto-container">
                         <canvas id="pareto-chart"></canvas>
-                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:rgba(0,0,0,0.1); border-radius:12px;">COMPUTING...</div>
+                        <div class="chart-loader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); font-weight:800; background:var(--card-bg-subtle); border-radius:12px;">COMPUTING...</div>
                     </div>
                 </div>
             </div>
