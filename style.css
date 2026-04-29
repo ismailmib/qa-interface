@@ -23,6 +23,13 @@
     --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --glass-bg: rgba(15, 23, 42, 0.7);
     --glass-border: rgba(255, 255, 255, 0.1);
+    --sidebar-logo-glow: rgba(99, 102, 241, 0.5);
+    --chart-grid: rgba(255, 255, 255, 0.06);
+    --chart-tick: rgba(255, 255, 255, 0.45);
+    --chart-legend: rgba(255, 255, 255, 0.6);
+    --chart-tooltip-bg: rgba(15, 23, 42, 0.95);
+    --inset-bar-bg: rgba(255, 255, 255, 0.05);
+    --card-bg-subtle: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="light"] {
@@ -33,10 +40,17 @@
     --text-muted: #64748b;
     --border: rgba(0, 0, 0, 0.08);
     --border-bright: rgba(0, 0, 0, 0.15);
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-bg: rgba(248, 250, 252, 0.85);
+    --glass-border: rgba(0, 0, 0, 0.08);
     --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    --sidebar-logo-glow: rgba(99, 102, 241, 0.3);
+    --chart-grid: rgba(0, 0, 0, 0.06);
+    --chart-tick: rgba(0, 0, 0, 0.45);
+    --chart-legend: rgba(0, 0, 0, 0.6);
+    --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
+    --inset-bar-bg: rgba(0, 0, 0, 0.05);
+    --card-bg-subtle: rgba(0, 0, 0, 0.02);
 }
 
 * {
@@ -380,8 +394,10 @@ h3,
     height: 50px;
     object-fit: cover;
     border-radius: 12px;
-    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    filter: drop-shadow(0 0 10px var(--sidebar-logo-glow));
+    border: 1px solid var(--glass-border);
+    position: relative;
+    z-index: 2;
 }
 
 .sidebar-brand-text {
@@ -409,7 +425,7 @@ h3,
     padding: 1rem;
     border-radius: var(--radius-md);
     margin-top: auto;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--surface-light);
     border: 1px solid var(--border);
 }
 
@@ -506,14 +522,14 @@ h3,
 }
 
 .btn-outline {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--surface-light);
     border: 1px solid var(--border);
     color: var(--text-main);
     backdrop-filter: blur(5px);
 }
 
 .btn-outline:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--surface-light);
     border-color: var(--primary);
 }
 
@@ -528,7 +544,7 @@ h3,
 
 .card:hover {
     border-color: rgba(59, 130, 246, 0.3);
-    background: #242f44;
+    background: var(--surface-light);
 }
 
 /* 📊 SPC Clickable Card */
@@ -588,9 +604,9 @@ h3,
 
 /* Glassmorphism Classes */
 .glass {
-    background: rgba(30, 41, 59, 0.7);
+    background: var(--glass-bg);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
 }
 
 /* Login Screen */
@@ -710,7 +726,7 @@ h3,
     align-items: center;
     justify-content: space-between;
     padding: 0 2rem;
-    background: rgba(15, 23, 42, 0.8);
+    background: var(--glass-bg);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border);
     position: sticky;
@@ -783,7 +799,7 @@ table {
 }
 
 th {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--surface-light);
     padding: 1.25rem 1.5rem;
     text-align: left;
     font-size: 0.75rem;
@@ -797,10 +813,11 @@ td {
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border);
     font-size: 0.9rem;
+    color: var(--text-main);
 }
 
 tr:hover td {
-    background: rgba(255, 255, 255, 0.01);
+    background: var(--surface-light);
 }
 
 /* Status Badges */
@@ -912,7 +929,7 @@ tr:hover td {
 input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
-    background: rgba(15, 23, 42, 0.6);
+    background: var(--surface-light);
     border: 1px solid var(--border);
     color: var(--text-main);
     border-radius: var(--radius-sm);
@@ -928,7 +945,7 @@ input:focus,
 select:focus,
 textarea:focus {
     border-color: var(--primary);
-    background: rgba(15, 23, 42, 0.8);
+    background: var(--surface);
     box-shadow: 0 0 0 4px var(--primary-glow);
     transform: translateY(-1px);
 }
@@ -943,7 +960,7 @@ textarea:focus {
 .filter-chip {
     padding: 0.4rem 0.8rem;
     border-radius: 100px;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--surface-light);
     border: 1px solid var(--border);
     font-size: 0.65rem;
     font-weight: 700;
@@ -957,7 +974,7 @@ textarea:focus {
 }
 
 .filter-chip:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface);
     border-color: rgba(59, 130, 246, 0.3);
 }
 
@@ -1077,7 +1094,7 @@ input:focus,
 select:focus,
 textarea:focus {
     border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface);
 }
 
 .view-header {
@@ -1125,7 +1142,7 @@ textarea:focus {
 
 .defect-bar-bg {
     height: 6px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--surface-light);
     border-radius: 3px;
     overflow: hidden;
 }
@@ -1136,7 +1153,7 @@ textarea:focus {
 
 .operator-hero-card {
     margin-bottom: 2rem;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+    background: var(--glass-bg);
     border-left: 4px solid var(--primary);
 }
 
@@ -1150,7 +1167,7 @@ textarea:focus {
 .progress-bar-container {
     width: 200px;
     height: 8px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--surface-light);
     border-radius: 4px;
     margin-top: 1rem;
     overflow: hidden;
@@ -1378,9 +1395,103 @@ h1 {
         font-size: 1.6rem;
     }
 
-    .form-group {
-        margin-bottom: 0.75rem;
+    .form-group input,
+    select {
+        padding: 0.65rem 1rem;
     }
+}
+
+/* =============================================================
+   🌗 LIGHT MODE OVERRIDES FOR JS-GENERATED INLINE STYLES
+   These override elements whose styles are set by app.js
+   ============================================================= */
+
+/* Progress bars / gauge tracks */
+[data-theme="light"] .progress-bar-container,
+[data-theme="light"] [style*="rgba(255,255,255,0.05)"],
+[data-theme="light"] [style*="rgba(255, 255, 255, 0.05)"] {
+    background: var(--surface-light) !important;
+}
+
+/* FPY SVG gauge track circle */
+[data-theme="light"] svg circle[stroke="rgba(255,255,255,0.05)"] {
+    stroke: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Shift progress bar inline style */
+[data-theme="light"] [style*="background: rgba(255,255,255,0.05); border-radius: 6px"] {
+    background: var(--surface-light) !important;
+}
+
+/* Sidebar logo drop shadow */
+[data-theme="light"] .sidebar-logo {
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
+}
+
+/* Shift summary small card top border */
+[data-theme="light"] .card.glass {
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Expanded SPC overlay */
+[data-theme="light"] .card-expand-overlay {
+    background: rgba(241, 245, 249, 0.85) !important;
+}
+
+/* SPC Modal background */
+[data-theme="light"] #spc-modal-backdrop {
+    background: rgba(248, 250, 252, 0.85) !important;
+}
+
+/* Chart loader background */
+[data-theme="light"] .chart-loader {
+    background: rgba(255, 255, 255, 0.7) !important;
+    color: var(--text-muted) !important;
+}
+
+/* Stage yield heatmap progress bars */
+[data-theme="light"] [style*="height:5px;background:rgba(255,255,255,0.06)"],
+[data-theme="light"] [style*="height: 6px; background: rgba(255,255,255,0.05)"],
+[data-theme="light"] [style*="height:4px; background:rgba(255,255,255,0.06)"],
+[data-theme="light"] [style*="height: 10px; background: rgba(255,255,255,0.05)"] {
+    background: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Traceability / Ledger unit card row  */
+[data-theme="light"] [style*="background:rgba(100,100,100,0.06)"] {
+    background: rgba(100, 100, 100, 0.04) !important;
+}
+
+/* Table badge inline style */
+[data-theme="light"] .badge[style*="rgba(255,255,255,0.05)"] {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Operator card inline progress bar */
+[data-theme="light"] [style*="padding:0.65rem 1rem;background:rgba(255,255,255,0.05)"] {
+    background: var(--surface-light) !important;
+}
+
+/* SPC modal subtitle */
+[data-theme="light"] #spc-modal-backdrop p[style*="rgba(255,255,255,0.4)"] {
+    color: var(--text-muted) !important;
+}
+
+/* SPC modal footer */
+[data-theme="light"] #spc-modal-backdrop footer {
+    color: var(--text-muted) !important;
+    border-top-color: var(--border) !important;
+}
+
+/* Webcam preview container */
+[data-theme="light"] [style*="background: #000"] {
+    background: #111 !important;
+}
+
+/* MRB / Analytics bottleneck cards */
+[data-theme="light"] [style*="background:rgba(239,68,68,0.05)"] {
+    background: rgba(239, 68, 68, 0.04) !important;
+}
 
 /* Theme Toggle Button */
 .theme-toggle-btn {

@@ -53,6 +53,27 @@ function initTheme() {
 
 initTheme();
 
+// 🎨 THEME-AWARE CHART COLOR HELPER
+// Reads computed CSS variables so charts adapt to dark/light mode
+function getChartColors() {
+    const style = getComputedStyle(document.documentElement);
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return {
+        grid:        isLight ? 'rgba(0,0,0,0.07)'        : 'rgba(255,255,255,0.06)',
+        tick:        isLight ? 'rgba(0,0,0,0.5)'         : 'rgba(255,255,255,0.5)',
+        tickFaint:   isLight ? 'rgba(0,0,0,0.35)'        : 'rgba(255,255,255,0.3)',
+        legend:      isLight ? 'rgba(0,0,0,0.65)'        : 'rgba(255,255,255,0.75)',
+        legendFaint: isLight ? 'rgba(0,0,0,0.5)'         : 'rgba(255,255,255,0.5)',
+        tooltipBg:   isLight ? 'rgba(255,255,255,0.98)'  : 'rgba(15,23,42,0.95)',
+        tooltipTitle:isLight ? '#0f172a'                 : '#ffffff',
+        tooltipBody: isLight ? 'rgba(0,0,0,0.7)'         : 'var(--text-main)',
+        tooltipBorder:'rgba(59,130,246,0.5)',
+        pointBorder: isLight ? 'rgba(0,0,0,0.3)'         : 'rgba(255,255,255,0.6)',
+        barLegacy:   isLight ? 'rgba(0,0,0,0.08)'        : 'rgba(255,255,255,0.07)',
+        barLegacyBorder: isLight ? 'rgba(0,0,0,0.18)'   : 'rgba(255,255,255,0.15)',
+    };
+}
+
 // 🏛️ Manufacturing Stages (Factory Defaults)
 // 🏛️ IPQC Manufacturing Stages (From IPQC_Inspection_Points.xlsx)
 const DEFAULT_STAGES = [
@@ -457,7 +478,7 @@ const templates = {
                     <div style="display:flex; justify-content:center; margin-bottom: 1.25rem;">
                         <div style="position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center;">
                             <svg viewBox="0 0 100 100" style="width: 100%; transform: rotate(-90deg);">
-                                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--inset-bar-bg)" stroke-width="8"></circle>
                                 <circle id="fpy-gauge-circle" cx="50" cy="50" r="45" fill="none" stroke="var(--success)" stroke-width="8"
                                         stroke-dasharray="282.7" stroke-dashoffset="15" style="filter: drop-shadow(0 0 8px var(--success)); transition: stroke-dashoffset 0.8s ease;"></circle>
                             </svg>
@@ -492,7 +513,7 @@ const templates = {
                             <div style="font-size: 3rem; font-weight: 900; line-height: 1;"><span id="total-shift-pass">0</span><span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;"> / <span id="total-shift-processed">0</span> UNITS</span></div>
                             <div style="font-weight: 800; color: var(--primary);" id="shift-perc-label">0%</div>
                         </div>
-                        <div class="progress-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; margin-bottom: 1.25rem;">
+                        <div class="progress-bar-container" style="width: 100%; height: 10px; background: var(--inset-bar-bg); border-radius: 6px; overflow: hidden; margin-bottom: 1.25rem;">
                             <div style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); box-shadow: 0 0 15px var(--primary-glow); transition: width 0.8s ease;" id="shift-progress-fill"></div>
                         </div>
                     </div>
@@ -1153,10 +1174,11 @@ function openSPCModal() {
     // ── Build the modal shell ──
     const modal = document.createElement('div');
     modal.id = 'spc-fullscreen-modal';
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     modal.style.cssText = `
         position: fixed; inset: 0; z-index: 2000;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(10, 15, 30, 0.85);
+        background: ${isLight ? 'rgba(241, 245, 249, 0.9)' : 'rgba(10, 15, 30, 0.85)'};
         backdrop-filter: blur(10px);
         transition: opacity 0.3s ease, transform 0.3s ease;
         opacity: 0; transform: scale(0.97);
@@ -1170,10 +1192,10 @@ function openSPCModal() {
     // ── Build the inner card ──
     const inner = document.createElement('div');
     inner.style.cssText = `
-        background: #0f172a;
+        background: var(--surface);
         border: 1px solid rgba(59,130,246,0.4);
         border-radius: 20px;
-        box-shadow: 0 0 60px rgba(59,130,246,0.2), 0 30px 80px rgba(0,0,0,0.7);
+        box-shadow: 0 0 60px rgba(59,130,246,0.15), 0 30px 80px rgba(0,0,0,0.3);
         width: 92vw;
         height: 88vh;
         display: flex;
@@ -1189,8 +1211,8 @@ function openSPCModal() {
     header.innerHTML = `
         <div>
             <div style="font-size:0.6rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.2em; margin-bottom:4px;">📊 Full-Screen Deep Dive</div>
-            <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#fff;">Statistical Process Control (SPC) — Batch Yield Window</h3>
-            <p style="margin:4px 0 0; font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:600;">Shewhart Control Chart · X̄ ± 3σ · Real-Time Batch Data</p>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--text-main);">Statistical Process Control (SPC) — Batch Yield Window</h3>
+            <p style="margin:4px 0 0; font-size:0.7rem; color:var(--text-muted); font-weight:600;">Shewhart Control Chart · X̄ ± 3σ · Real-Time Batch Data</p>
         </div>
         <button id="spc-modal-close-btn" style="
             background: rgba(239,68,68,0.1);
@@ -1217,7 +1239,7 @@ function openSPCModal() {
 
     // ── Footer stats ──
     const footer = document.createElement('div');
-    footer.style.cssText = 'display:flex; justify-content:space-between; flex-shrink:0; font-size:0.75rem; font-weight:800; color:rgba(255,255,255,0.5); padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.06);';
+    footer.style.cssText = 'display:flex; justify-content:space-between; flex-shrink:0; font-size:0.75rem; font-weight:800; color:var(--text-muted); padding-top:0.75rem; border-top:1px solid var(--border);';
     footer.innerHTML = `
         <span>UPPER CONTROL LIMIT (UCL): <span id="spc-modal-ucl" style="color:#a78bfa;">--</span></span>
         <span>PROCESS MEAN (X̄): <span id="spc-modal-mean" style="color:var(--primary);">--</span></span>
@@ -1307,6 +1329,7 @@ function renderSPCModalChart() {
     if (lclCard) lclCard.textContent = lcl.toFixed(1) + '%';
 
     const pointColors = batchYields.map(y => y < lcl ? '#ef4444' : '#10b981');
+    const C = getChartColors();
 
     new Chart(canvas, {
         type: 'line',
@@ -1322,7 +1345,7 @@ function renderSPCModalChart() {
                 fill: true,
                 pointRadius: batchYields.map(y => y < lcl ? 10 : 6),
                 pointBackgroundColor: pointColors,
-                pointBorderColor: 'rgba(255,255,255,0.6)',
+                pointBorderColor: C.pointBorder,
                 pointBorderWidth: 2,
                 pointHoverRadius: 12
             }, {
@@ -1359,7 +1382,7 @@ function renderSPCModalChart() {
                 legend: {
                     display: true,
                     labels: {
-                        color: 'rgba(255,255,255,0.75)',
+                        color: C.legend,
                         font: { size: 13, weight: '700' },
                         boxWidth: 30,
                         padding: 20
@@ -1368,11 +1391,11 @@ function renderSPCModalChart() {
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(15,23,42,0.95)',
-                    borderColor: 'rgba(59,130,246,0.5)',
+                    backgroundColor: C.tooltipBg,
+                    borderColor: C.tooltipBorder,
                     borderWidth: 1,
-                    titleColor: '#fff',
-                    bodyColor: 'rgba(255,255,255,0.7)',
+                    titleColor: C.tooltipTitle,
+                    bodyColor: C.tooltipBody,
                     callbacks: {
                         afterLabel(ctx) {
                             if (ctx.datasetIndex === 0) {
@@ -1390,16 +1413,16 @@ function renderSPCModalChart() {
                 y: {
                     min: Math.max(70, lcl - 5),
                     max: 100,
-                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    grid: { color: C.grid },
                     ticks: {
-                        color: 'rgba(255,255,255,0.5)',
+                        color: C.tick,
                         callback: v => v + '%',
                         font: { size: 13, weight: '700' }
                     },
                     title: {
                         display: true,
                         text: 'BATCH YIELD %',
-                        color: 'rgba(255,255,255,0.3)',
+                        color: C.tickFaint,
                         font: { size: 12, weight: '800' },
                         padding: 12
                     }
@@ -1407,13 +1430,13 @@ function renderSPCModalChart() {
                 x: {
                     grid: { display: false },
                     ticks: {
-                        color: 'rgba(255,255,255,0.5)',
+                        color: C.tick,
                         font: { size: 12, weight: '700' }
                     },
                     title: {
                         display: true,
                         text: 'PRODUCTION BATCH TIMELINE',
-                        color: 'rgba(255,255,255,0.3)',
+                        color: C.tickFaint,
                         font: { size: 12, weight: '800' },
                         padding: 12
                     }
@@ -1490,7 +1513,7 @@ function render(templateKey, title, breadcrumb) {
                 <div class="flex justify-between text-muted" style="font-size: 0.7rem; margin-bottom: 4px;">
                     <span>${d.zone}</span><span>${d.rate}% Rate</span>
                 </div>
-                <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                <div style="height: 10px; background: var(--inset-bar-bg); border-radius: 10px; overflow: hidden;">
                     <div style="height: 100%; width: ${d.rate}%; background: ${d.rate > 30 ? 'var(--accent)' : 'var(--primary)'};"></div>
                 </div>
             </div>
@@ -1569,7 +1592,7 @@ function render(templateKey, title, breadcrumb) {
             bar.style.cssText = 'display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-wrap:wrap;';
             bar.innerHTML = `
                 <!-- Batch size selector -->
-                <div id="sim-batch-selector" style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; padding:3px 6px;">
+                <div id="sim-batch-selector" style="display:flex; align-items:center; gap:4px; background:var(--inset-bar-bg); border:1px solid var(--border); border-radius:8px; padding:3px 6px;">
                     <span style="font-size:0.6rem; color:var(--text-muted); font-weight:800; margin-right:4px;">BATCH</span>
                     <button data-sz="50"  onclick="selectSimBatchSize(50)"  class="sim-sz-btn" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;font-weight:800;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all 0.15s;">50</button>
                     <button data-sz="100" onclick="selectSimBatchSize(100)" class="sim-sz-btn" style="background:var(--primary);border:none;color:#fff;font-size:0.7rem;font-weight:800;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all 0.15s;">100</button>
@@ -2134,7 +2157,7 @@ function updateQuickMRBList() {
     }
 
     listEl.innerHTML = mrbUnits.map(u => `
-        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:0.6rem; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:var(--card-bg-subtle); border:1px solid var(--border); border-radius:8px; padding:0.6rem; display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <div style="font-size:0.75rem; font-weight:800; color:var(--text-main);">${u.serial}</div>
                 <div style="font-size:0.55rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; margin-top:2px;">
@@ -2172,7 +2195,7 @@ function updateStageHeatmap(containerId) {
                     <span>${s.name}</span>
                     <span style="color: ${color}">${yieldVal}%</span>
                 </div>
-                <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                <div style="height: 6px; background: var(--inset-bar-bg); border-radius: 3px; overflow: hidden;">
                     <div style="width: ${yieldVal}%; height: 100%; background: ${color}; border-radius: 3px; filter: drop-shadow(0 0 2px ${color});"></div>
                 </div>
             </div>
@@ -2492,7 +2515,7 @@ function setupExecutionScreen() {
 
             <!-- 📸 Checkpoint Specific Photo Handler -->
             ${cp.photo ? `
-                <div class="photo-capture-slot card glass" style="margin-top: 1rem; border: 1px dashed var(--border); background:rgba(255,255,255,0.01);">
+                <div class="photo-capture-slot card glass" style="margin-top: 1rem; border: 1px dashed var(--border); background:var(--card-bg-subtle);">
                     <div class="flex items-center gap-4">
                         <div id="shot-preview-${i}" class="photo-preview-box" style="width: 120px; height: 80px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; color: var(--text-muted);">
                              No Snapshot
@@ -3025,7 +3048,7 @@ function renderLedgerTable(filteredUnits, container) {
         const pct = Math.round((Math.min(u.currentStageOrder, totalStages) / totalStages) * 100);
         const color = u.status === 'COMPLETED' ? 'var(--success)' : u.status === 'MRB_REVIEW' ? 'var(--error)' : 'var(--primary)';
         return `<div style="min-width:80px;">
-            <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+            <div style="height:5px;background:var(--inset-bar-bg);border-radius:3px;overflow:hidden;">
                 <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
             </div>
             <div style="font-size:0.52rem;color:var(--text-muted);margin-top:2px;text-align:center;">Stage ${u.currentStageOrder} / ${totalStages}</div>
@@ -3035,7 +3058,7 @@ function renderLedgerTable(filteredUnits, container) {
     // ── Summary Bar ─────────────────────────────────────────────────────
     const summaryBar = `
         <div style="display:flex;gap:1.25rem;flex-wrap:wrap;align-items:center;padding:0.9rem 1.25rem;
-                    background:rgba(255,255,255,0.03);border:1px solid var(--border);
+                    background:var(--card-bg-subtle);border:1px solid var(--border);
                     border-radius:12px;margin-bottom:1.5rem;">
             <span style="font-size:0.6rem;font-weight:900;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Fleet Snapshot</span>
             <span style="font-size:0.8rem;font-weight:800;">${summary.total} <span style="font-size:0.6rem;font-weight:600;color:var(--text-muted);">TOTAL</span></span>
@@ -3083,7 +3106,7 @@ function renderLedgerTable(filteredUnits, container) {
         return `
             <div style="margin-bottom:2rem;">
                 <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;
-                            padding:0.65rem 1rem;background:rgba(255,255,255,0.05);
+                            padding:0.65rem 1rem;background:var(--inset-bar-bg);
                             border-radius:10px 10px 0 0;border-bottom:2px solid var(--border);">
                     <i data-lucide="layers" style="width:14px;height:14px;color:var(--text-muted);"></i>
                     <span style="font-family:monospace;font-weight:900;font-size:0.85rem;">${batchLabel}</span>
@@ -3264,7 +3287,7 @@ function updateAuditFeed() {
     list.innerHTML = recentLogs.map(log => `
     <tr style="border-left: 3px solid ${log.event === 'UNIT_SCRAP' ? 'var(--error)' : (log.event.includes('REWORK') ? 'var(--warning)' : 'var(--success)')}" >
             <td><strong style="color:var(--text-bright);">${log.details.split(' ')[1] || '---'}</strong></td>
-            <td><span class="badge" style="background:rgba(255,255,255,0.05); font-size:0.6rem;">${log.event.split('_')[0]}</span></td>
+            <td><span class="badge" style="background:var(--inset-bar-bg); font-size:0.6rem;">${log.event.split('_')[0]}</span></td>
             <td style="font-size:0.75rem;">${log.details}</td>
             <td class="text-muted" style="font-size:0.65rem;">${log.time.split(',')[1] || log.time}</td>
         </tr >
@@ -3408,6 +3431,7 @@ function goToMRB() {
 
 function renderExecutiveCharts() {
     console.log('📊 Chart Engine: Booting...');
+    const C = getChartColors();
 
     setTimeout(() => {
         try {
@@ -3472,7 +3496,8 @@ function renderExecutiveCharts() {
                                 if (units === null || units === undefined) return;
 
                                 const label = `${units.toLocaleString()} / ${total.toLocaleString()}`;
-                                ctx.fillStyle = dsIdx === 1 ? 'rgba(200,180,255,0.95)' : 'rgba(255,255,255,0.55)';
+                                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                                ctx.fillStyle = dsIdx === 1 ? 'rgba(139,92,246,0.95)' : (isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)');
                                 ctx.font = 'bold 9px Inter, sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.fillText(label, bar.x, bar.y - 6);
@@ -3490,8 +3515,8 @@ function renderExecutiveCharts() {
                         datasets: [{
                             label: 'Historical Baseline Yield %',
                             data: [84.2, 85.5, 87.1, 88.4, 86.8, 90.2, null],
-                            backgroundColor: 'rgba(255,255,255,0.07)',
-                            borderColor: 'rgba(255,255,255,0.15)',
+                            backgroundColor: C.barLegacy,
+                            borderColor: C.barLegacyBorder,
                             borderWidth: 1,
                             borderRadius: 6
                         }, {
@@ -3505,9 +3530,9 @@ function renderExecutiveCharts() {
                         responsive: true,
                         maintainAspectRatio: false,
                         animation: { duration: 700 },
-                        layout: { padding: { top: 22 } }, // room for bar labels
+                        layout: { padding: { top: 22 } },
                         plugins: {
-                            legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 } } },
+                            legend: { position: 'bottom', labels: { color: C.legendFaint, font: { size: 10 } } },
                             tooltip: {
                                 mode: 'index',
                                 intersect: false,
@@ -3528,8 +3553,8 @@ function renderExecutiveCharts() {
                             }
                         },
                         scales: {
-                            y: { min: 80, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => v + '%' } },
-                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+                            y: { min: 80, max: 100, grid: { color: 'var(--inset-bar-bg)' }, ticks: { color: C.tick, callback: v => v + '%' } },
+                            x: { grid: { display: false }, ticks: { color: C.tick } }
                         }
                     }
                 });
@@ -3613,7 +3638,7 @@ function renderExecutiveCharts() {
                         maintainAspectRatio: false,
                         animation: { duration: 700 },
                         plugins: {
-                            legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, boxWidth: 18 } },
+                    legend: { display: true, labels: { color: C.legendFaint, font: { size: 9 }, boxWidth: 18 } },
                             tooltip: {
                                 callbacks: {
                                     afterLabel(ctx) {
@@ -3627,9 +3652,9 @@ function renderExecutiveCharts() {
                             }
                         },
                         scales: {
-                            yLeft: { position: 'left', title: { display: true, text: 'Rejections', color: 'rgba(255,255,255,0.3)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.4)', stepSize: 1 } },
-                            yRight: { position: 'right', title: { display: true, text: 'Cumulative %', color: 'rgba(255,255,255,0.3)', font: { size: 9 } }, min: 0, max: 100, grid: { display: false }, ticks: { color: 'rgba(16,185,129,0.6)', callback: v => v + '%' } },
-                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } } }
+                            yLeft: { position: 'left', title: { display: true, text: 'Rejections', color: C.tickFaint, font: { size: 9 } }, grid: { color: C.grid }, ticks: { color: C.tick, stepSize: 1 } },
+                            yRight: { position: 'right', title: { display: true, text: 'Cumulative %', color: C.tickFaint, font: { size: 9 } }, min: 0, max: 100, grid: { display: false }, ticks: { color: 'rgba(16,185,129,0.6)', callback: v => v + '%' } },
+                            x: { grid: { display: false }, ticks: { color: C.tick, font: { size: 9 } } }
                         }
                     }
                 });
@@ -3681,12 +3706,12 @@ function renderExecutiveCharts() {
             });
 
         if (allUnits.length === 0) {
-            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed var(--border); border-radius: 12px;">
                 <i data-lucide="activity" style="width:28px; height:28px; color:var(--text-muted); margin: 0 auto 0.5rem; display:block; opacity:0.4;"></i>
                 <p class="text-muted" style="font-size:0.7rem;">No production data yet. Run a simulation to see live bottleneck alerts.</p>
             </div>`;
         } else if (bottlenecks.length === 0) {
-            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+            list.innerHTML = `<div class="text-center py-8" style="border: 1px dashed var(--border); border-radius: 12px;">
                 <i data-lucide="check-circle-2" style="width:32px; height:32px; color:var(--success); margin: 0 auto 0.5rem; display:block; opacity:0.5;"></i>
                 <p class="text-muted" style="font-size:0.7rem;">All stations performing within safety benchmarks (≥ 92%).</p>
             </div>`;
@@ -3708,7 +3733,7 @@ function renderExecutiveCharts() {
                             <div style="font-size:0.62rem; color:var(--text-muted); font-weight:600;">
                                 ⚠️ ${s.fails} rejections &nbsp;|&nbsp; ${gap}% below 92% target
                             </div>
-                            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:6px; overflow:hidden;">
+                            <div style="height:4px; background:var(--inset-bar-bg); border-radius:2px; margin-top:6px; overflow:hidden;">
                                 <div style="width:${fpy}%; height:100%; background:${color}; border-radius:2px;"></div>
                             </div>
                         </div>
@@ -3835,7 +3860,7 @@ function renderSPCChartOnly() {
                     legend: {
                         display: true,
                         labels: {
-                            color: 'rgba(255,255,255,0.7)',
+                            color: 'var(--text-main)',
                             font: { size: fontSize, weight: '700' }
                         }
                     }
@@ -3843,12 +3868,12 @@ function renderSPCChartOnly() {
                 scales: {
                     y: {
                         min: Math.max(70, lcl - 5), max: 100,
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: fontSize, weight: '700' } }
+                        grid: { color: 'var(--inset-bar-bg)' },
+                        ticks: { color: C.tick, font: { size: fontSize, weight: '700' } }
                     },
                     x: {
                         grid: { display: false },
-                        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: fontSize, weight: '700' } }
+                        ticks: { color: C.tick, font: { size: fontSize, weight: '700' } }
                     }
                 }
             }
