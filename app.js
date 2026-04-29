@@ -22,6 +22,37 @@ try {
     console.warn("⚠️ System: CLOUD OFFLINE - Using Local Fallback Storage");
 }
 
+// 🌗 THEME ENGINE
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    updateThemeIcons(newTheme);
+    
+    // Refresh Lucide icons for any new elements
+    if (window.lucide) lucide.createIcons();
+}
+
+function updateThemeIcons(theme) {
+    const loginIcon = document.getElementById('login-theme-icon');
+    const mainIcon = document.getElementById('main-theme-icon');
+    const iconName = theme === 'dark' ? 'sun' : 'moon';
+    
+    if (loginIcon) loginIcon.setAttribute('data-lucide', iconName);
+    if (mainIcon) mainIcon.setAttribute('data-lucide', iconName);
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    // Note: Icons will be updated after initial lucide.createIcons() call in HTML
+}
+
+initTheme();
+
 // 🏛️ Manufacturing Stages (Factory Defaults)
 // 🏛️ IPQC Manufacturing Stages (From IPQC_Inspection_Points.xlsx)
 const DEFAULT_STAGES = [

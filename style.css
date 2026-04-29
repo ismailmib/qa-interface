@@ -25,6 +25,20 @@
     --glass-border: rgba(255, 255, 255, 0.1);
 }
 
+[data-theme="light"] {
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --surface-light: #f1f5f9;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border: rgba(0, 0, 0, 0.08);
+    --border-bright: rgba(0, 0, 0, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -306,9 +320,9 @@ h3,
     font-size: 2rem;
     font-weight: 700;
     margin-bottom: 0.4rem;
-    color: #fff;
+    color: var(--text-main);
     background: none;
-    -webkit-text-fill-color: #fff;
+    -webkit-text-fill-color: var(--text-main);
     letter-spacing: -0.02em;
     line-height: 1.2;
 }
@@ -378,7 +392,7 @@ h3,
 .brand-main {
     font-size: 0.9rem;
     font-weight: 900;
-    color: white;
+    color: var(--text-main);
     letter-spacing: 0.05em;
     font-family: 'Outfit', sans-serif;
 }
@@ -629,7 +643,7 @@ h3,
     padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3.5rem);
     border-radius: 6px;
     text-align: left;
-    background: rgba(10, 15, 30, 0.92);
+    background: var(--surface);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-shadow:
@@ -674,7 +688,7 @@ h3,
 
 .sidebar {
     width: 280px;
-    background: #111827;
+    background: var(--surface);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -1367,6 +1381,43 @@ h1 {
     .form-group {
         margin-bottom: 0.75rem;
     }
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-light);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-left: 1rem;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+[data-theme="light"] .login-screen {
+    background: 
+        radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+        var(--background);
+}
+
+[data-theme="light"] .login-screen::before {
+    opacity: 0.3;
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+}
 
     input,
     select {
