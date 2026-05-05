@@ -724,10 +724,21 @@ const templates = {
                 </div>
 
                 <div class="card glass shadow-lg">
-                    <h3 class="section-title-sm" style="color:var(--error)">⚠️ Critical Management Actions</h3>
-                    <p class="text-muted" style="font-size: 0.7rem; margin-bottom: 1.5rem;">Stages currently performing below 92% benchmark</p>
-                    <div id="bottleneck-action-list" class="flex flex-col gap-3">
-                         <!-- Bottlenecks injected here -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div>
+                            <h3 class="section-title-sm" style="color:var(--error)">⚠️ Critical Management Actions</h3>
+                            <p class="text-muted" style="font-size: 0.7rem; margin-bottom: 1rem;">Stages currently performing below 92% benchmark</p>
+                            <div id="bottleneck-action-list" class="flex flex-col gap-3">
+                                 <!-- Bottlenecks injected here -->
+                            </div>
+                        </div>
+                        <div style="border-top: 1px dashed var(--border); padding-top: 1.5rem;">
+                            <h3 class="section-title-sm" style="color:var(--accent)">🔮 Predictive Defect Analysis</h3>
+                            <p class="text-muted" style="font-size: 0.7rem; margin-bottom: 1rem;">AI-driven failure rate trend forecasting based on legacy baseline</p>
+                            <div id="predictive-action-list" class="flex flex-col gap-3">
+                                 <!-- Predictive alerts injected here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2994,7 +3005,7 @@ function renderHeritageView(unit) {
 }
 
 /** 📊 SHARED LEDGER TABLE RENDERER */
-function renderLedgerTable(filteredUnits, container) {
+function renderLedgerTable(filteredUnits, container, bypassLimit = false) {
     const allUnits = Object.values(units);
     const totalStages = Math.max(manufacturingStages.length, 1);
 
@@ -3016,9 +3027,14 @@ function renderLedgerTable(filteredUnits, container) {
         return getUnitNo(b.serial) - getUnitNo(a.serial);
     });
 
+    // ── Performance: Limit to first 150 units to prevent DOM bloat ──
+    const displayLimit = 150;
+    const isTruncated = !bypassLimit && sorted.length > displayLimit;
+    const unitsToRender = isTruncated ? sorted.slice(0, displayLimit) : sorted;
+
     // ── Group by batch prefix ───────────────────────────────────────────
     const batches = {}, batchOrder = [];
-    sorted.forEach(u => {
+    unitsToRender.forEach(u => {
         const m = u.serial.match(/^(B\d{6})/);
         const key = m ? m[1] : 'BASELINE';
         if (!batches[key]) { batches[key] = []; batchOrder.push(key); }
@@ -3118,7 +3134,7 @@ function renderLedgerTable(filteredUnits, container) {
                         ${bWIP > 0 ? `<span style="font-size:0.65rem;font-weight:800;color:var(--primary);">🔄 ${bWIP} WIP</span>` : ''}
                     </div>
                 </div>
-                <div class="card glass" style="padding:0;overflow:hidden;border-radius:0 0 12px 12px;border-top:none;margin-top:0;">
+                <div class="card" style="padding:0;overflow:hidden;border-radius:0 0 12px 12px;border-top:none;margin-top:0; background:var(--surface);">
                     <div class="table-container" style="border:none;margin:0;">
                         <table>
                             <thead>
@@ -3134,8 +3150,36 @@ function renderLedgerTable(filteredUnits, container) {
             </div>`;
     }).join('');
 
-    container.innerHTML = summaryBar + batchGroups;
+    const footer = isTruncated ? `
+        <div class="card glass text-center" style="padding: 2rem; margin-top: 1rem; border: 1px dashed var(--border);">
+            <p class="text-muted" style="margin-bottom: 1rem;">Performance optimization: Showing first ${displayLimit} of ${filteredUnits.length} units.</p>
+            <button class="btn btn-outline" onclick="renderAllLedgerTable()" style="margin: 0 auto;">
+                <i data-lucide="list" style="width:16px; margin-right:8px;"></i> View Entire Dataset (${filteredUnits.length} Units)
+            </button>
+        </div>` : '';
+
+    container.innerHTML = summaryBar + batchGroups + footer;
     lucide.createIcons();
+}
+
+function renderAllLedgerTable() {
+    const filterType = document.querySelector('input[name="ledger-filter"]:checked').value;
+    const resultArea = document.getElementById('trace-result-area');
+    if (!resultArea) return;
+
+    const filtered = Object.values(units).filter(u => {
+        if (filterType === 'wip') return u.status === 'IN_PROGRESS' || u.status === 'IN_PROGRESS';
+        if (filterType === 'passed') return u.status === 'COMPLETED';
+        if (filterType === 'scrap') return u.status === 'SCRAP';
+        if (filterType === 'rework') return u.isRework;
+        if (filterType === 'mrb') return u.status === 'MRB_REVIEW';
+        return true; // "all"
+    }).sort((a, b) => {
+        if (a.status === 'MRB_REVIEW' && b.status !== 'MRB_REVIEW') return -1;
+        return 0;
+    });
+
+    renderLedgerTable(filtered, resultArea, true); // bypassLimit = true
 }
 
 function runLiveFilter() {
@@ -3580,30 +3624,60 @@ function renderExecutiveCharts() {
                 destroyIfExists('pareto-chart');
 
                 // Build rejection count per stage name
-                const rejMap = {};
+                const rejMap = {}; // Live rejections
+                const histMap = {}; // Historical rejections
+
+                // 1. Extract Historical Rejections from Legacy Data
+                const keyMap = {
+                    s1: 'Raw Material Inventory',
+                    s2: 'PCB Testing',
+                    s3_1: 'Software Flashing Stage 1',
+                    s3_2: 'Software Flashing Stage 2',
+                    s4: 'Mechanical Assembly',
+                    s5: 'Packing & Shipping'
+                };
+                
+                Object.values(legacyManualPerformance.data).forEach(month => {
+                    Object.entries(month).forEach(([k, v]) => {
+                        if (keyMap[k] && v.rej) {
+                            const name = keyMap[k];
+                            histMap[name] = (histMap[name] || 0) + v.rej;
+                        }
+                    });
+                });
+
+                // 2. Extract Live Rejections
                 Object.values(units).forEach(u => {
                     if (u.status === 'MRB_REVIEW' && u.scrapStageName) {
                         rejMap[u.scrapStageName] = (rejMap[u.scrapStageName] || 0) + 1;
                     }
                 });
 
-                // Fallback: if no real data yet, show demo
-                const hasRealData = Object.keys(rejMap).length > 0;
-                const stageNames = hasRealData
-                    ? Object.entries(rejMap).sort((a, b) => b[1] - a[1]).map(e => e[0])
-                    : manufacturingStages.map(s => s.name);
-                const rejCounts = hasRealData
-                    ? Object.entries(rejMap).sort((a, b) => b[1] - a[1]).map(e => e[1])
-                    : [12, 9, 6, 4, 2, 1]; // demo
+                // 3. Combine and Sort by TOTAL (Historical + Live)
+                const allStages = [...new Set([...Object.keys(histMap), ...Object.keys(rejMap)])];
+                const sortedStages = allStages.sort((a, b) => {
+                    const totalA = (histMap[a] || 0) + (rejMap[a] || 0);
+                    const totalB = (histMap[b] || 0) + (rejMap[b] || 0);
+                    return totalB - totalA;
+                });
 
-                // Cumulative % line
-                const totalRej = rejCounts.reduce((a, b) => a + b, 0);
+                const histData = sortedStages.map(s => histMap[s] || 0);
+                const liveData = sortedStages.map(s => rejMap[s] || 0);
+                const totalData = sortedStages.map(s => (histMap[s] || 0) + (rejMap[s] || 0));
+
+                // Cumulative % line (based on total)
+                const grandTotal = totalData.reduce((a, b) => a + b, 0);
                 let cumSum = 0;
-                const cumPct = rejCounts.map(v => { cumSum += v; return parseFloat(((cumSum / totalRej) * 100).toFixed(1)); });
+                const cumPct = totalData.map(v => { 
+                    cumSum += v; 
+                    return grandTotal > 0 ? parseFloat(((cumSum / grandTotal) * 100).toFixed(1)) : 0; 
+                });
 
-                // Bar colours: red → orange gradient by rank
-                const barColors = rejCounts.map((_, i) => {
-                    const ratio = i / Math.max(rejCounts.length - 1, 1);
+                // Colors
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                const histColor = isLight ? 'rgba(100, 116, 139, 0.4)' : 'rgba(148, 163, 184, 0.3)';
+                const liveColors = sortedStages.map((_, i) => {
+                    const ratio = i / Math.max(sortedStages.length - 1, 1);
                     const r = Math.round(239 - ratio * 60);
                     const g = Math.round(68 + ratio * 100);
                     return `rgba(${r},${g},68,0.85)`;
@@ -3612,13 +3686,22 @@ function renderExecutiveCharts() {
                 new Chart(paretoCanvas, {
                     type: 'bar',
                     data: {
-                        labels: stageNames,
+                        labels: sortedStages,
                         datasets: [{
-                            label: 'Rejections',
-                            data: rejCounts,
-                            backgroundColor: barColors,
-                            borderRadius: 6,
+                            label: 'Live Rejections',
+                            data: liveData,
+                            backgroundColor: liveColors,
+                            borderRadius: 4,
+                            stack: 'stack0',
                             order: 2,
+                            yAxisID: 'yLeft'
+                        }, {
+                            label: 'Historical Defects',
+                            data: histData,
+                            backgroundColor: histColor,
+                            borderRadius: 4,
+                            stack: 'stack0',
+                            order: 3,
                             yAxisID: 'yLeft'
                         }, {
                             label: 'Cumulative %',
@@ -3637,28 +3720,56 @@ function renderExecutiveCharts() {
                         responsive: true,
                         maintainAspectRatio: false,
                         animation: { duration: 700 },
+                        scales: {
+                            yLeft: {
+                                stacked: true,
+                                position: 'left',
+                                grid: { color: C.grid },
+                                ticks: { color: C.tick, font: { size: 9, weight: '700' } },
+                                title: { display: true, text: 'Total Defect Count', color: C.legend, font: { size: 10, weight: '800' } }
+                            },
+                            yRight: {
+                                position: 'right',
+                                min: 0, max: 100,
+                                grid: { display: false },
+                                ticks: { color: 'rgba(16,185,129,1)', callback: v => v + '%', font: { size: 9, weight: '700' } },
+                                title: { display: true, text: 'Cumulative Impact', color: 'rgba(16,185,129,1)', font: { size: 10, weight: '800' } }
+                            },
+                            x: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { color: C.tick, font: { size: 8, weight: '700' }, maxRotation: 45, minRotation: 45 }
+                            }
+                        },
                         plugins: {
-                    legend: { display: true, labels: { color: C.legendFaint, font: { size: 9 }, boxWidth: 18 } },
+                            legend: { 
+                                display: true, 
+                                position: 'top',
+                                labels: { color: C.legend, font: { size: 9, weight: '700' }, boxWidth: 12, padding: 10 } 
+                            },
                             tooltip: {
+                                backgroundColor: C.tooltipBg,
+                                titleColor: C.tooltipTitle,
+                                bodyColor: C.tooltipBody,
+                                borderColor: C.tooltipBorder,
+                                borderWidth: 1,
+                                padding: 12,
+                                boxPadding: 6,
                                 callbacks: {
                                     afterLabel(ctx) {
-                                        if (ctx.datasetIndex === 0) {
-                                            const pct = ((ctx.parsed.y / totalRej) * 100).toFixed(1);
-                                            return `${pct}% of all rejections`;
+                                        if (ctx.datasetIndex < 2) {
+                                            const total = (histData[ctx.dataIndex] || 0) + (liveData[ctx.dataIndex] || 0);
+                                            const pct = ((total / grandTotal) * 100).toFixed(1);
+                                            return `Stage Total: ${total} units (${pct}% of all defects)`;
                                         }
-                                        return `${ctx.parsed.y}% cumulative`;
+                                        return `${ctx.parsed.y}% of total cumulative loss`;
                                     }
                                 }
                             }
-                        },
-                        scales: {
-                            yLeft: { position: 'left', title: { display: true, text: 'Rejections', color: C.tickFaint, font: { size: 9 } }, grid: { color: C.grid }, ticks: { color: C.tick, stepSize: 1 } },
-                            yRight: { position: 'right', title: { display: true, text: 'Cumulative %', color: C.tickFaint, font: { size: 9 } }, min: 0, max: 100, grid: { display: false }, ticks: { color: 'rgba(16,185,129,0.6)', callback: v => v + '%' } },
-                            x: { grid: { display: false }, ticks: { color: C.tick, font: { size: 9 } } }
                         }
                     }
                 });
-                console.log(`✅ Pareto Chart: ${stageNames.length} stages | Total rejections: ${totalRej}${!hasRealData ? ' (demo data)' : ''}`);
+                console.log(`✅ Pareto Chart: ${sortedStages.length} stages rendered with Historical + Live data.`);
             }
 
         } catch (err) {
@@ -3936,6 +4047,121 @@ function updateBottleneckSummary() {
         }).join('');
     }
     lucide.createIcons();
+    updatePredictiveAnalysis();
+}
+
+function updatePredictiveAnalysis() {
+    const list = document.getElementById('predictive-action-list');
+    if (!list) return;
+
+    const allUnits = Object.values(units);
+    
+    // Legacy mapping
+    const keyMap = {
+        s1: 'Raw Material Inventory',
+        s2: 'PCB Testing',
+        s3_1: 'Software Flashing Stage 1',
+        s3_2: 'Software Flashing Stage 2',
+        s4: 'Mechanical Assembly',
+        s5: 'Packing & Shipping'
+    };
+    
+    const histRates = {};
+    const totalLegacyUnits = legacyManualPerformance.inventoryPlan * legacyManualPerformance.months.length; // 3000 * 6 = 18000
+    
+    Object.values(legacyManualPerformance.data).forEach(month => {
+        Object.entries(month).forEach(([k, v]) => {
+            if (keyMap[k] && v.rej) {
+                const name = keyMap[k];
+                histRates[name] = (histRates[name] || 0) + v.rej;
+            }
+        });
+    });
+    
+    Object.keys(histRates).forEach(k => {
+        histRates[k] = (histRates[k] / totalLegacyUnits) * 100; // Baseline rejection %
+    });
+
+    // Live mapping (Rolling last 5 batches)
+    const batchMap = new Map();
+    allUnits.forEach(u => {
+        const label = u.batchLabel || u.serial.split('-')[0];
+        if (!batchMap.has(label)) batchMap.set(label, []);
+        batchMap.get(label).push(u);
+    });
+    
+    const sortedBatches = Array.from(batchMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    const recentBatches = sortedBatches.slice(-5).map(b => b[1]); // last 5 batches arrays
+    
+    const recentUnits = recentBatches.flat();
+    const liveStats = {};
+    manufacturingStages.forEach(s => {
+        liveStats[s.name] = { passes: 0, fails: 0 };
+    });
+
+    recentUnits.forEach(u => {
+        u.history.forEach(h => {
+            if (liveStats[h.stage]) {
+                if (h.status === 'PASS') liveStats[h.stage].passes++;
+                else if (h.status === 'UNIT_REJECTED') liveStats[h.stage].fails++;
+            }
+        });
+    });
+
+    const predictions = [];
+    Object.keys(liveStats).forEach(stage => {
+        const total = liveStats[stage].passes + liveStats[stage].fails;
+        if (total > 0) {
+            const liveRejRate = (liveStats[stage].fails / total) * 100;
+            const baseline = histRates[stage] || 0;
+            const trend = liveRejRate - baseline;
+            
+            // If live rejection rate is trending upward over baseline by at least 1%
+            if (trend > 1) {
+                predictions.push({
+                    stage,
+                    liveRate: liveRejRate,
+                    baseline,
+                    trend
+                });
+            }
+        }
+    });
+    
+    predictions.sort((a, b) => b.trend - a.trend); // Worst trend first
+
+    if (allUnits.length === 0 || recentUnits.length === 0) {
+        list.innerHTML = `<div class="text-center py-6" style="border: 1px dashed var(--border); border-radius: 12px;">
+            <i data-lucide="brain-circuit" style="width:24px; height:24px; color:var(--text-muted); margin: 0 auto 0.5rem; display:block; opacity:0.4;"></i>
+            <p class="text-muted" style="font-size:0.7rem;">Waiting for batch data to generate predictions.</p>
+        </div>`;
+    } else if (predictions.length === 0) {
+        list.innerHTML = `<div class="text-center py-6" style="border: 1px dashed var(--border); border-radius: 12px;">
+            <i data-lucide="shield-check" style="width:28px; height:28px; color:var(--success); margin: 0 auto 0.5rem; display:block; opacity:0.5;"></i>
+            <p class="text-muted" style="font-size:0.7rem;">Stable. All stages performing near or better than historical baseline.</p>
+        </div>`;
+    } else {
+        list.innerHTML = predictions.map(p => {
+            const extBatches = Math.max(1, Math.floor(8 / p.trend)); // naive extrapolation
+            return `
+                <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:1rem; display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                    <div style="flex:1;">
+                        <div style="font-weight:800; font-size:0.82rem; color:var(--accent);">${p.stage}</div>
+                        <div style="font-size:0.62rem; color:var(--text-muted); margin-top:0.3rem;">
+                            📈 Trending <b>+${p.trend.toFixed(1)}%</b> over baseline (${p.baseline.toFixed(1)}%).
+                        </div>
+                        <div style="font-size:0.62rem; color:var(--warning); margin-top:0.3rem; font-weight:700;">
+                            ⚠️ At this rate, will exceed control limits in ~${extBatches} batches.
+                        </div>
+                    </div>
+                    <div style="text-align:right; min-width:60px;">
+                        <div style="font-size:1.15rem; font-weight:900; color:var(--error);">${p.liveRate.toFixed(1)}%</div>
+                        <div style="font-size:0.55rem; color:var(--text-muted); font-weight:700;">CURR. REJ</div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+    if (window.lucide) lucide.createIcons();
 }
 
 function finalScrapUnit(sn) {
